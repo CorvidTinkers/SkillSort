@@ -1,2 +1,42 @@
-# SkillSort
-An AI-powered B2B tool for college placement officers to bulk-upload student resumes, automatically parse and enrich candidate attributes, and intuitively review data.
+# SkillSort: AI-Powered Attribute Enrichment 
+
+SkillSort is a web-based B2B platform designed to solve a major administrative bottleneck for college placement cells: standardizing highly unstructured data (resumes) into a clean, searchable database. By automating data transcription and providing an ATS-scoring layer, SkillSort transitions placement officers from manual data entry to a strategic, supervisory role.
+
+## 🚀 Core Features
+
+* **Bulk Resume Parsing:** Drag-and-drop zone accepting `.zip` files of PDF resumes or `.xlsx`/`.csv` files containing resume URLs.
+* **Dynamic Attribute Extraction:** Placement officers can define specific extraction fields via the UI (e.g., domain, skill stack, industry experience).
+* **Human-in-the-Loop Review Grid:** A powerful, edge-to-edge data grid to review parsed data. It features sticky columns (Student Name, Resume Link) to maintain context while scrolling.
+* **AI Confidence Color-Coding:** Builds user trust by highlighting data states:
+* **ATS Simulation Engine:** Cross-references the extracted student JSON data against a pasted Job Description to generate a simulated "ATS Match Score".
+* **External Coding Profile Verification:** Automatically extracts URLs for developer profiles (GitHub, LeetCode, etc.), scrapes live metrics, and populates verified stats as distinct columns.
+* **Seamless Export:** One-click download to CSV, Excel, or ATS integrations to create highly specialized candidate shortlists.
+
+## 🛠️ Tech Stack
+
+**Frontend (Client)**
+* **Framework:** React 
+* **Table Library:** TanStack Table or AG Grid (for high-density data rendering) 
+* **Styling:** Tailwind CSS using the "Modern Teal & Mint" structural palette 
+* **Typography:** Inter or Roboto (optimized for dense data interfaces) 
+
+**Backend (Server & AI Pipeline)**
+* **Framework:** Java Spring Boot 
+* **PDF Extraction:** Apache PDFBox (or similar Java-based parser) 
+* **AI Integration:** Spring Boot HTTP client (`RestTemplate` or `WebClient`) routing to an LLM API 
+* **Data Handling:** Jackson (for parsing and structuring the LLM's JSON output) 
+
+## ⚙️ Getting Started
+
+*(Placeholder for local installation instructions)*
+
+### Prerequisites
+* Node.js (v18+)
+* Java Development Kit (JDK 17+)
+* Maven
+* An active API key for your chosen LLM provider
+
+### Local Setup
+1. **Clone the repository**
+   ```bash
+   git clone [https://github.com/yourusername/skillsort.git](https://github.com/yourusername/skillsort.git)
