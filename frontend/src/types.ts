@@ -1,0 +1,26 @@
+export type Confidence = 'high' | 'medium' | 'low';
+
+export interface ExtractedField {
+  value: string | number;
+  confidence: Confidence;
+}
+
+export interface StudentData {
+  id: string;
+  name: ExtractedField;
+  domain: ExtractedField;
+  skills: ExtractedField;
+  experience: ExtractedField;
+  role: ExtractedField;
+  atsScore: ExtractedField;
+  githubInfo: ExtractedField;
+  resumeUrl: string;
+  resumeText: {
+    header: string;
+    contact: string;
+    summary: string;
+    skills: string;
+    experience: string;
+    education: string;
+  };
+}
