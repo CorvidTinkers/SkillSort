@@ -77,37 +77,47 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen w-full flex flex-col bg-slate-100 overflow-hidden font-sans">
+    <div className="h-screen w-full flex flex-col bg-surface-container-low overflow-hidden font-sans">
       {/* Global Header */}
-      <header className="h-16 bg-slate-900 shrink-0 flex items-center px-6 justify-between select-none">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 bg-teal-500 rounded flex items-center justify-center shadow-sm text-slate-900">
-            <Briefcase size={18} strokeWidth={2.5} />
+      <header className="h-16 bg-surface-container-lowest border-b border-slate-200 shrink-0 flex items-center px-6 justify-between select-none shadow-sm">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 bg-primary/10 text-primary rounded flex items-center justify-center shadow-sm">
+              <Briefcase size={18} strokeWidth={2.5} />
+            </div>
+            <span className="text-primary font-display font-bold text-2xl tracking-tight">SkillSort</span>
+            <span className="text-slate-400 ml-2 text-sm border-l border-slate-200 pl-4 font-normal">Placement Intelligence</span>
           </div>
-          <span className="text-white font-bold text-xl tracking-tight">SkillSort.</span>
-          <span className="text-slate-500 ml-2 text-sm border-l border-slate-700 pl-4">Placement Intelligence</span>
-        </div>
-        
-        {hasUploaded && (
-          <div className="flex bg-slate-800 rounded-lg p-1">
-            <button 
-              onClick={() => setView('grid')}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${view === 'grid' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
-            >
-              <LayoutGrid size={16} /> Review Grid
-            </button>
-            <button 
-              onClick={() => setView('dashboard')}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${view === 'dashboard' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
-            >
-              <BarChart3 size={16} /> Analytics
-            </button>
-          </div>
-        )}
 
-        <div className="flex items-center gap-4 text-sm font-medium text-slate-300">
-          <button className="hover:text-white transition-colors">Documentation</button>
-          <div className="h-8 w-8 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center text-white">PO</div>
+          {hasUploaded && (
+            <div className="flex gap-6 h-full items-center pl-6 border-l border-slate-200">
+              <button 
+                onClick={() => setView('grid')}
+                className={`text-[14px] font-semibold pb-1 cursor-pointer transition-colors relative ${view === 'grid' ? 'text-primary' : 'text-slate-600 hover:text-primary'}`}
+              >
+                Review Grid
+                {view === 'grid' && (
+                  <span className="absolute bottom-[-20px] left-0 right-0 h-[2.5px] bg-primary rounded-t-full" />
+                )}
+              </button>
+              <button 
+                onClick={() => setView('dashboard')}
+                className={`text-[14px] font-semibold pb-1 cursor-pointer transition-colors relative ${view === 'dashboard' ? 'text-primary' : 'text-slate-600 hover:text-primary'}`}
+              >
+                Analytics
+                {view === 'dashboard' && (
+                  <span className="absolute bottom-[-20px] left-0 right-0 h-[2.5px] bg-primary rounded-t-full" />
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-4 text-sm font-semibold text-slate-600">
+          <button className="hover:text-primary transition-colors cursor-pointer">Documentation</button>
+          <div className="h-8 w-8 rounded-full bg-primary-container text-on-primary-container border border-primary/20 flex items-center justify-center font-bold text-xs select-none">
+            PO
+          </div>
         </div>
       </header>
 

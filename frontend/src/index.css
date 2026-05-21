@@ -1,4 +1,18 @@
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@700&display=swap');
+
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", sans-serif;
+  --font-display: "Hanken Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --color-primary: #00685f;
+  --color-primary-container: #008378;
+  --color-surface-container-low: #f2f4f6;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-bright: #f7f9fb;
+}
 
 /* Global custom scrollbar styles for a premium look */
 ::-webkit-scrollbar {

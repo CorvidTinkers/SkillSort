@@ -39,16 +39,7 @@ interface ReviewGridProps {
 // Color-code helper to map confidence levels to soft, palatable pastel themes
 const getConfidenceBg = (confidence: string, isActive: boolean) => {
   if (isActive) return '';
-  switch(confidence) {
-    case 'high': 
-      return 'bg-emerald-50/80 text-emerald-950 hover:bg-emerald-100/50';
-    case 'medium': 
-      return 'bg-amber-50/80 text-amber-950 hover:bg-amber-100/50';
-    case 'low': 
-      return 'bg-rose-50/80 text-rose-950 hover:bg-rose-100/50';
-    default: 
-      return 'hover:bg-slate-50';
-  }
+  return 'hover:bg-slate-50/80';
 };
 
 const SortableHeader = ({ header, children }: any) => {
@@ -81,8 +72,8 @@ const SortableHeader = ({ header, children }: any) => {
         <div className="flex items-center gap-2 cursor-pointer" onClick={header.column.getToggleSortingHandler()}>
           <span className="font-bold tracking-wider text-slate-600">{children}</span>
           {{
-            asc: <span className="text-teal-600 font-bold ml-1">↑</span>,
-            desc: <span className="text-teal-600 font-bold ml-1">↓</span>,
+            asc: <span className="text-primary font-bold ml-1">↑</span>,
+            desc: <span className="text-primary font-bold ml-1">↓</span>,
           }[header.column.getIsSorted() as string] ?? null}
         </div>
         
@@ -96,7 +87,7 @@ const SortableHeader = ({ header, children }: any) => {
             className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 transition"
             title={isPinned ? "Unpin Column" : "Pin Column Left"}
           >
-            <Pin size={11} className={isPinned ? "fill-teal-600 text-teal-600" : ""} />
+            <Pin size={11} className={isPinned ? "fill-primary text-primary" : ""} />
           </button>
           <button 
             type="button"
@@ -161,7 +152,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
           <span className="font-bold text-slate-800 tracking-tight group-hover:text-slate-950 transition-colors text-[14px]">
             {info.getValue() as string}
           </span>
-          <span className="text-[11px] text-teal-600 font-semibold hover:text-teal-700 transition-colors select-none cursor-pointer flex items-center gap-1 mt-0.5">
+          <span className="text-[11px] text-primary font-semibold hover:text-primary-container transition-colors select-none cursor-pointer flex items-center gap-1 mt-0.5">
             View Resume PDF
           </span>
         </div>
@@ -214,8 +205,8 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
           dotColor = 'bg-emerald-500';
           label = 'Outstanding';
         } else if (score >= 80) {
-          pillStyles = 'bg-teal-50 text-teal-800 border-teal-200/60';
-          dotColor = 'bg-teal-500';
+          pillStyles = 'bg-primary/5 text-primary border-primary/20';
+          dotColor = 'bg-primary';
           label = 'Strong Match';
         } else if (score >= 70) {
           pillStyles = 'bg-amber-50 text-amber-800 border-amber-200/60';
@@ -228,11 +219,11 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
         }
 
         return (
-          <div className="flex items-center gap-2.5 py-0.5 select-none">
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 py-0.5 select-none whitespace-normal">
             <span className={`px-2.5 py-1 rounded-md font-mono font-bold text-xs tracking-tight border ${pillStyles}`}>
               {score}%
             </span>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 whitespace-nowrap">
               <span className={`h-2 w-2 rounded-full ${dotColor}`} />
               <span className="text-xs font-semibold text-slate-700 tracking-tight">{label}</span>
             </div>
@@ -270,10 +261,26 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
   });
 
   const ExtractedCell = ({ field }: { field: ExtractedField }) => {
+    const confidence = field.confidence;
+    let textColor = 'text-slate-800';
+    let dotColor = '';
+
+    if (confidence === 'high') {
+      textColor = 'text-emerald-700 font-semibold';
+      dotColor = 'bg-emerald-500';
+    } else if (confidence === 'medium') {
+      textColor = 'text-amber-700 font-semibold';
+      dotColor = 'bg-amber-500';
+    } else if (confidence === 'low') {
+      textColor = 'text-rose-700 font-semibold';
+      dotColor = 'bg-rose-500';
+    }
+
     return (
-      <div className="flex flex-col justify-center h-full py-0.5">
+      <div className="flex items-center gap-2 h-full py-0.5 select-none">
+        {dotColor && <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${dotColor}`} />}
         <span 
-          className="text-slate-800 truncate block font-semibold text-[13px] tracking-tight max-w-[220px]" 
+          className={`${textColor} truncate block text-[13px] tracking-tight max-w-[220px]`} 
           title={String(field.value)}
         >
           {field.value}
@@ -288,9 +295,9 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
     // Focus review outline
     if (isActive) {
       if (isPinned) {
-        return 'px-5 py-4 text-sm cursor-pointer border-b border-r border-slate-200 transition-all bg-teal-50 ring-inset ring-2 ring-teal-500 z-20 sticky left-0 font-semibold shadow-inner';
+        return 'px-5 py-4 text-sm cursor-pointer border-b border-r border-slate-200 transition-all bg-primary/5 ring-inset ring-2 ring-primary z-20 sticky left-0 font-semibold shadow-inner';
       }
-      return 'px-5 py-4 text-sm cursor-pointer border-b border-r border-slate-200 transition-all bg-teal-50/90 ring-inset ring-2 ring-teal-500 z-10 relative font-medium shadow-inner';
+      return 'px-5 py-4 text-sm cursor-pointer border-b border-r border-slate-200 transition-all bg-primary/5 ring-inset ring-2 ring-primary z-10 relative font-medium shadow-inner';
     }
 
     // Pinned column gets static freeze / neutral aesthetic
@@ -436,7 +443,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
       {/* Dynamic Toast Popup */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-[200] bg-slate-900 border border-slate-800 text-white rounded-xl shadow-xl px-4 py-3.5 flex items-center gap-2.5 animate-in slide-in-from-bottom duration-300 max-w-sm">
-          <div className="h-5 w-5 bg-teal-500 text-slate-900 rounded-full flex items-center justify-center font-bold text-xs shrink-0">✓</div>
+          <div className="h-5 w-5 bg-primary text-white rounded-full flex items-center justify-center font-bold text-xs shrink-0">✓</div>
           <div className="text-xs font-semibold tracking-tight">{toastMessage}</div>
         </div>
       )}
@@ -444,7 +451,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
       {/* Grid Toolbar */}
       <div className="h-14 border-b border-slate-200 flex items-center px-6 shrink-0 bg-white relative">
         <div className="flex items-center gap-3">
-          <Layers className="h-5 w-5 text-teal-600" />
+          <Layers className="h-5 w-5 text-primary" />
           <h2 className="font-semibold text-slate-800">Review Extraction ({students.length} Records)</h2>
           
           {/* Subtle palatable legend displaying confidence mapping */}
@@ -477,7 +484,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
                 setColumnsMenuOpen(!columnsMenuOpen);
                 setWeightsOpen(false);
               }}
-              className={`flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border px-3 py-2 rounded-lg cursor-pointer transition shadow-sm ${columnsMenuOpen ? 'border-teal-500 ring-1 ring-teal-500 z-50 text-slate-900' : 'border-slate-200 hover:border-slate-300'}`}
+              className={`flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border px-3 py-2 rounded-lg cursor-pointer transition shadow-sm ${columnsMenuOpen ? 'border-primary ring-1 ring-primary z-50 text-slate-900' : 'border-slate-200 hover:border-slate-300'}`}
             >
               <Settings2 size={13} /> Display Columns
             </button>
@@ -494,7 +501,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
                         const allVisible = table.getIsAllColumnsVisible();
                         table.toggleAllColumnsVisible(!allVisible);
                       }}
-                      className="text-[11px] tracking-tight text-teal-400 hover:text-teal-300 font-bold cursor-pointer"
+                      className="text-[11px] tracking-tight text-primary hover:text-primary-container font-bold cursor-pointer"
                     >
                       {table.getIsAllColumnsVisible() ? 'Clear All' : 'Reset All'}
                     </button>
@@ -507,7 +514,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
                       placeholder="Filter column keys..."
                       value={colSearchQuery}
                       onChange={(e) => setColSearchQuery(e.target.value)}
-                      className="w-full text-xs pl-8 pr-2 py-1.5 bg-slate-950 border border-slate-800 rounded-lg focus:outline-none focus:border-teal-500 text-white placeholder-slate-600 font-medium"
+                      className="w-full text-xs pl-8 pr-2 py-1.5 bg-slate-950 border border-slate-800 rounded-lg focus:outline-none focus:border-primary text-white placeholder-slate-600 font-medium"
                     />
                   </div>
 
@@ -522,7 +529,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
                           className={`w-full flex items-center justify-between text-left px-2 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${isVisible ? 'bg-slate-800/60 text-white' : 'hover:bg-slate-800/40 text-slate-500'}`}
                         >
                           <span className="font-semibold">{column.columnDef.header as string}</span>
-                          <div className={`h-4 w-4 rounded flex items-center justify-center border transition-all shrink-0 ${isVisible ? 'bg-teal-500 border-teal-500 text-slate-950' : 'border-slate-700 bg-slate-950'}`}>
+                          <div className={`h-4 w-4 rounded flex items-center justify-center border transition-all shrink-0 ${isVisible ? 'bg-primary border-primary text-white' : 'border-slate-700 bg-slate-950'}`}>
                             {isVisible && <Check size={11} strokeWidth={3} />}
                           </div>
                         </button>
@@ -544,7 +551,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
               setWeightsOpen(!weightsOpen);
               setColumnsMenuOpen(false);
             }}
-            className={`flex items-center gap-1.5 text-xs font-bold bg-white border px-3 py-2 rounded-lg cursor-pointer transition shadow-sm ${weightsOpen ? 'border-teal-500 text-teal-800' : 'text-slate-600 hover:text-slate-900 border-slate-200 hover:border-slate-300'}`}
+            className={`flex items-center gap-1.5 text-xs font-bold bg-white border px-3 py-2 rounded-lg cursor-pointer transition shadow-sm ${weightsOpen ? 'border-primary text-primary' : 'text-slate-600 hover:text-slate-900 border-slate-200 hover:border-slate-300'}`}
           >
             <Sliders size={13} /> Algorithm Strategy
           </button>
@@ -554,7 +561,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
         <button 
           type="button"
           onClick={() => setIsExportOpen(true)}
-          className="flex items-center gap-1.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 px-3.5 py-2 rounded-lg cursor-pointer transition shadow-sm border border-teal-700"
+          className="flex items-center gap-1.5 text-xs font-bold text-white bg-primary hover:bg-primary-container px-3.5 py-2 rounded-lg cursor-pointer transition shadow-sm border border-primary/20"
         >
           <FileDown size={13} /> Export Shortlist
         </button>
@@ -566,9 +573,9 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
           <div className="max-w-4xl mx-auto">
             <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <Sliders size={16} className="text-teal-600" />
+                <Sliders size={16} className="text-primary" />
                 <span className="text-sm font-bold text-slate-800 tracking-tight">Recalculate Weighted ATS Strategy</span>
-                <span className="text-[10px] bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded-full border border-teal-200/50">Simulated Pipeline</span>
+                <span className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full border border-primary/20">Simulated Pipeline</span>
               </div>
               <button 
                 type="button"
@@ -584,7 +591,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
               <div className="flex flex-col gap-1.5 bg-white p-3.5 rounded-xl border border-slate-200">
                 <div className="flex justify-between items-center text-xs">
                   <span className="font-bold text-slate-700">Skills Weight</span>
-                  <span className="text-teal-600 font-mono font-bold text-xs bg-teal-50 px-1.5 py-0.5 rounded">{skillWeight}%</span>
+                  <span className="text-primary font-mono font-bold text-xs bg-primary/5 px-1.5 py-0.5 rounded">{skillWeight}%</span>
                 </div>
                 <input
                   type="range"
@@ -593,7 +600,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
                   step="5"
                   value={skillWeight}
                   onChange={(e) => setSkillWeight(Number(e.target.value))}
-                  className="h-1.5 w-full bg-slate-200 accent-teal-600 cursor-pointer rounded-lg appearance-none"
+                  className="h-1.5 w-full bg-slate-200 accent-primary cursor-pointer rounded-lg appearance-none"
                 />
                 <p className="text-[10px] text-slate-400 leading-normal">Sets match quotient impact for certified languages & tech.</p>
               </div>
@@ -602,7 +609,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
               <div className="flex flex-col gap-1.5 bg-white p-3.5 rounded-xl border border-slate-200">
                 <div className="flex justify-between items-center text-xs">
                   <span className="font-bold text-slate-700">Experience Layer</span>
-                  <span className="text-teal-600 font-mono font-bold text-xs bg-teal-50 px-1.5 py-0.5 rounded">{expWeight}%</span>
+                  <span className="text-primary font-mono font-bold text-xs bg-primary/5 px-1.5 py-0.5 rounded">{expWeight}%</span>
                 </div>
                 <input
                   type="range"
@@ -611,7 +618,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
                   step="5"
                   value={expWeight}
                   onChange={(e) => setExpWeight(Number(e.target.value))}
-                  className="h-1.5 w-full bg-slate-200 accent-teal-600 cursor-pointer rounded-lg appearance-none"
+                  className="h-1.5 w-full bg-slate-200 accent-primary cursor-pointer rounded-lg appearance-none"
                 />
                 <p className="text-[10px] text-slate-400 leading-normal">Controls weight for internships, tenure & researcher projects.</p>
               </div>
@@ -620,7 +627,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
               <div className="flex flex-col gap-1.5 bg-white p-3.5 rounded-xl border border-slate-200">
                 <div className="flex justify-between items-center text-xs">
                   <span className="font-bold text-slate-700">Domain Match Intensity</span>
-                  <span className="text-teal-600 font-mono font-bold text-xs bg-teal-50 px-1.5 py-0.5 rounded">{domainWeight}%</span>
+                  <span className="text-primary font-mono font-bold text-xs bg-primary/5 px-1.5 py-0.5 rounded">{domainWeight}%</span>
                 </div>
                 <input
                   type="range"
@@ -629,7 +636,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
                   step="5"
                   value={domainWeight}
                   onChange={(e) => setDomainWeight(Number(e.target.value))}
-                  className="h-1.5 w-full bg-slate-200 accent-teal-600 cursor-pointer rounded-lg appearance-none"
+                  className="h-1.5 w-full bg-slate-200 accent-primary cursor-pointer rounded-lg appearance-none"
                 />
                 <p className="text-[10px] text-slate-400 leading-normal">Assigns rating focus to general placements focus groups.</p>
               </div>
@@ -651,7 +658,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
               <button
                 type="button"
                 onClick={recalculateScores}
-                className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs px-3.5 py-1.5 flex items-center gap-1.5 rounded-lg transition shadow-sm"
+                className="bg-primary hover:bg-primary-container text-white font-bold text-xs px-3.5 py-1.5 flex items-center gap-1.5 rounded-lg transition shadow-sm"
               >
                 <RefreshCw size={11} /> Confirm Algorithm Recalculation
               </button>
@@ -668,9 +675,9 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
           <div className="absolute inset-0 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center z-40 transition-all duration-300">
             <div className="max-w-md w-full px-6 flex flex-col items-center text-center">
               <div className="relative mb-6">
-                <div className="h-16 w-16 rounded-full border-4 border-slate-100 border-t-teal-600 animate-spin" />
+                <div className="h-16 w-16 rounded-full border-4 border-slate-100 border-t-primary animate-spin" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <Database size={18} className="text-teal-600 animate-pulse" />
+                  <Database size={18} className="text-primary animate-pulse" />
                 </div>
               </div>
 
@@ -680,12 +687,12 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
               {/* Progress Line */}
               <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mt-6 mb-3.5 border border-slate-200">
                 <div 
-                  className="bg-teal-600 h-full transition-all duration-300 rounded-full"
+                  className="bg-primary h-full transition-all duration-300 rounded-full"
                   style={{ width: `${recalculationProgress}%` }}
                 />
               </div>
               
-              <span className="text-xs font-mono font-bold text-teal-600">{recalculationProgress}% Complete</span>
+              <span className="text-xs font-mono font-bold text-primary">{recalculationProgress}% Complete</span>
             </div>
           </div>
         )}
@@ -755,7 +762,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4 shrink-0">
               <div className="flex items-center gap-2.5 animate-pulse">
-                <div className="h-8 w-8 bg-teal-50 text-teal-700 rounded-lg flex items-center justify-center">
+                <div className="h-8 w-8 bg-primary/5 text-primary rounded-lg flex items-center justify-center">
                   <FileDown size={18} />
                 </div>
                 <div>
@@ -779,7 +786,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
               <div className="space-y-2">
                 <div className="flex justify-between items-center text-xs">
                   <span className="font-bold text-slate-700">Minimum Compatible Match Rating</span>
-                  <span className="text-teal-600 font-mono font-bold text-xs bg-teal-50 px-2.5 py-0.5 rounded border border-teal-100">&gt;= {exportThreshold}% ATS Score</span>
+                  <span className="text-primary font-mono font-bold text-xs bg-primary/5 px-2.5 py-0.5 rounded border border-primary/20">&gt;= {exportThreshold}% ATS Score</span>
                 </div>
                 <input
                   type="range"
@@ -788,7 +795,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
                   step="5"
                   value={exportThreshold}
                   onChange={(e) => setExportThreshold(Number(e.target.value))}
-                  className="h-1.5 w-full bg-slate-200 accent-teal-600 cursor-pointer rounded-lg appearance-none"
+                  className="h-1.5 w-full bg-slate-200 accent-primary cursor-pointer rounded-lg appearance-none"
                 />
                 <div className="flex justify-between text-[10px] text-slate-400 font-semibold px-0.5">
                   <span>55% Minimal match</span>
@@ -804,7 +811,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
                   <button
                     type="button"
                     onClick={() => setExportFormat('csv')}
-                    className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition cursor-pointer ${exportFormat === 'csv' ? 'border-teal-500 bg-teal-50/50 text-teal-950 font-bold ring-1 ring-teal-500' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-medium'}`}
+                    className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition cursor-pointer ${exportFormat === 'csv' ? 'border-primary bg-primary/5 text-primary font-bold ring-1 ring-primary' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-medium'}`}
                   >
                     <span className="text-xs font-bold tracking-tight">CSV Ledger</span>
                     <span className="text-[10px] text-slate-400 font-semibold mt-1">Universal Sheets</span>
@@ -812,7 +819,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
                   <button
                     type="button"
                     onClick={() => setExportFormat('xlsx')}
-                    className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition cursor-pointer ${exportFormat === 'xlsx' ? 'border-teal-500 bg-teal-50/50 text-teal-950 font-bold ring-1 ring-teal-500' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-medium'}`}
+                    className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition cursor-pointer ${exportFormat === 'xlsx' ? 'border-primary bg-primary/5 text-primary font-bold ring-1 ring-primary' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-medium'}`}
                   >
                     <span className="text-xs font-bold tracking-tight">XLSX Document</span>
                     <span className="text-[10px] text-slate-400 font-semibold mt-1">Excel Formatted</span>
@@ -820,7 +827,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
                   <button
                     type="button"
                     onClick={() => setExportFormat('json')}
-                    className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition cursor-pointer ${exportFormat === 'json' ? 'border-teal-500 bg-teal-50/50 text-teal-950 font-bold ring-1 ring-teal-500' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-medium'}`}
+                    className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition cursor-pointer ${exportFormat === 'json' ? 'border-primary bg-primary/5 text-primary font-bold ring-1 ring-primary' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-medium'}`}
                   >
                     <span className="text-xs font-bold tracking-tight">JSON Matrix</span>
                     <span className="text-[10px] text-slate-400 font-semibold mt-1">Full API Schema</span>
@@ -870,7 +877,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
                 type="button"
                 disabled={eligibleCandidates.length === 0}
                 onClick={triggerCSVDownload}
-                className="bg-teal-600 hover:bg-teal-700 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed text-white font-bold text-xs px-4 py-2 flex items-center gap-2 rounded-lg transition shadow-sm border border-teal-700 cursor-pointer"
+                className="bg-primary hover:bg-primary-container disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed text-white font-bold text-xs px-4 py-2 flex items-center gap-2 rounded-lg transition shadow-sm border border-primary/20 cursor-pointer"
               >
                 <FileDown size={14} /> Download Filtered Shortlist
               </button>
