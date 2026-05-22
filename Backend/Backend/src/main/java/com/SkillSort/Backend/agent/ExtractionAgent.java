@@ -1,79 +1,77 @@
 package com.SkillSort.Backend.agent;
 
-import com.SkillSort.Backend.model.StudentAttribute;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.SkillSort.Backend.model.ExtractedField;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class ExtractionAgent {
 
     private final ChatClient chatClient;
-    private final ObjectMapper objectMapper;
 
-    // Load your clean system prompt file from resources/prompts
     @Value("classpath:prompts/extraction-system-prompt.txt")
     private Resource systemPromptResource;
 
-    // Injecting the auto-configured ChatClient framework
     public ExtractionAgent(ChatClient.Builder chatClientBuilder) {
         this.chatClient = chatClientBuilder.build();
-        this.objectMapper = new ObjectMapper();
     }
 
-    public StudentAttribute extractFields(String rawPdfText, List<String> fieldsToExtract) {
-        String baseSystemPrompt;
+    public Map<String, ExtractedField> extractFields(String rawPdfText, List<String> fieldsToExtract) {
+        int maxAttempts = 3;
+        int inprogresscnt = 0;
         
-        // 1. Read your isolated prompt text file
-        try {
-            baseSystemPrompt = systemPromptResource.getContentAsString(StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new RuntimeException("Machi! Failed to read prompt file: " + e.getMessage());
-        }
+        List<String> currentFieldsToExtract = new ArrayList<>(fieldsToExtract);
+        Map<String, ExtractedField> finalResult = new HashMap<>();
+        String userPromptText = "Resume raw layout data:\n\n" + rawPdfText;
 
-        // 2. Append dynamic request values and specific JSON instructions to prompt
-        String formattedSystemPrompt = """
-            %s
+        while (inprogresscnt < maxAttempts && !currentFieldsToExtract.isEmpty()) {
+            String fieldsStr = String.join(", ", currentFieldsToExtract);
             
-            Target parameters requested by operator: %s
+            // Add a strict instruction if this is a retry loop
+            String extraInstruction = inprogresscnt > 0 
+                ? "\n\nCRITICAL: You forgot these fields in the previous attempt. You must generate ONLY these missing fields now." 
+                : "";
             
-            IMPORTANT: Ensure your output is a single, valid JSON object containing all requested fields as keys, in addition to the "student_name" and "confidence_score" keys.
-            """.formatted(baseSystemPrompt, fieldsToExtract.toString());
+            try {
+                Map<String, ExtractedField> partialResult = chatClient.prompt()
+                        .system(s -> s.text(systemPromptResource)
+                                .param("fields", fieldsStr + extraInstruction))
+                        .user(u -> u.text(userPromptText))
+                        .call()
+                        .entity(new ParameterizedTypeReference<Map<String, ExtractedField>>() {});
+                        
+                if (partialResult != null) {
+                    finalResult.putAll(partialResult);
+                }
+            } catch (Exception e) {
+                System.err.println("Extraction attempt " + (inprogresscnt + 1) + " failed: " + e.getMessage());
+            }
 
-        String userPrompt = String.format("Resume raw layout data:\n\n%s", rawPdfText);
-
-        // 3. Fire the extraction request and get the raw response string
-        String response = chatClient.prompt()
-                .system(formattedSystemPrompt)
-                .user(userPrompt)
-                .call()
-                .content();
-
-        if (response == null) {
-            throw new RuntimeException("Machi! Model returned an empty response.");
+            // Validation: determine which fields are still completely missing
+            List<String> missingFields = new ArrayList<>();
+            for (String reqField : currentFieldsToExtract) {
+                if (!finalResult.containsKey(reqField) || finalResult.get(reqField) == null || finalResult.get(reqField).value() == null) {
+                    missingFields.add(reqField);
+                }
+            }
+            
+            currentFieldsToExtract = missingFields;
+            inprogresscnt++;
         }
-
-        // 4. Clean up any markdown code block wrappers
-        response = response.trim();
-        if (response.startsWith("```")) {
-            // Strip opening backticks and language tag
-            response = response.replaceAll("^```[a-zA-Z]*\\s*", "");
-            // Strip closing backticks
-            response = response.replaceAll("\\s*```$", "");
-            response = response.trim();
+        
+        // Fallback: If it failed after 3 tries, populate with dummy data to avoid null pointer exceptions
+        for (String field : fieldsToExtract) {
+            finalResult.putIfAbsent(field, new ExtractedField("Not Provided", "low"));
         }
-
-        // 5. Deserialize the JSON response directly into the StudentAttribute POJO
-        try {
-            return objectMapper.readValue(response, StudentAttribute.class);
-        } catch (IOException e) {
-            throw new RuntimeException("Machi! Failed to parse JSON response from LLM into StudentAttribute: " + e.getMessage() + "\nRaw response: " + response);
-        }
+        
+        return finalResult;
     }
 }

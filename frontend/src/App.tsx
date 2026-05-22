@@ -3,13 +3,14 @@ import { UploadZone } from './components/UploadZone';
 import { ReviewGrid } from './components/ReviewGrid';
 import { ResumeViewer } from './components/ResumeViewer';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
-import { MOCK_STUDENTS } from './data';
+import { extractResumesBatch } from './services/api';
 import { StudentData } from './types';
 import { Briefcase, LayoutGrid, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function App() {
-  const [students, setStudents] = useState<StudentData[]>(MOCK_STUDENTS);
+  const [students, setStudents] = useState<StudentData[]>([]);
   const [hasUploaded, setHasUploaded] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
   const [activeField, setActiveField] = useState<keyof StudentData | null>(null);
   const [view, setView] = useState<'grid' | 'dashboard'>('grid');
@@ -62,12 +63,30 @@ export default function App() {
     document.addEventListener('mouseup', handleMouseUp);
   };
 
-  const handleUpload = () => {
-    // Simulate upload process
+  const handleUpload = async (file: File) => {
+    setIsProcessing(true);
     setHasUploaded(true);
-    if (students.length > 0) {
-      setActiveStudentId(students[0].id);
-      setActiveField('domain');
+    setStudents([]); // Clear existing if any
+    
+    try {
+      const targetFields = ['name', 'domain', 'skills', 'experience', 'role', 'atsScore', 'githubInfo'];
+      let isFirst = true;
+      
+      await extractResumesBatch(file, targetFields, (student) => {
+        setStudents(prev => [...prev, student]);
+        
+        if (isFirst) {
+          setActiveStudentId(student.id);
+          setActiveField('domain');
+          isFirst = false;
+        }
+      });
+      
+    } catch (err) {
+      console.error('Upload failed', err);
+      alert('Failed to process the batch. Please check console for details.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -124,7 +143,7 @@ export default function App() {
       {/* Main Flow */}
       <main className="flex-1 flex overflow-hidden">
         {!hasUploaded ? (
-          <UploadZone onUpload={handleUpload} />
+          <UploadZone onUpload={handleUpload} isProcessing={isProcessing} />
         ) : view === 'dashboard' ? (
           <AnalyticsDashboard students={students} />
         ) : (

@@ -93,38 +93,14 @@ export function ResumeViewer({
       </div>
 
       {/* Document Canvas */}
-      <div className="flex-1 overflow-y-auto p-6 flex justify-center pb-20">
-        <div className="bg-white w-full max-w-[21cm] min-h-[29.7cm] shadow-md p-10 font-sans text-slate-800 border border-slate-200 ring-1 ring-slate-900/5">
-          {/* Mock Document Render */}
-          <div className="space-y-6">
-            
-            <div className={`text-center pb-6 border-b border-slate-200 ${getHighlightClass(['name'])}`}>
-              <h1 className="text-3xl font-bold uppercase tracking-widest text-slate-900 mb-2">{student.resumeText.header}</h1>
-              <p className={`text-sm text-slate-500 inline-block ${getHighlightClass(['githubInfo'])}`}>{student.resumeText.contact}</p>
-            </div>
-
-            <div className={`pt-2 ${getHighlightClass(['domain', 'role'])}`}>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-teal-700 mb-2">Professional Summary</h2>
-              <p className="text-sm leading-relaxed text-slate-600">{student.resumeText.summary}</p>
-            </div>
-
-            <div className={`pt-2 ${getHighlightClass(['skills'])}`}>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-teal-700 mb-2">Technical Core</h2>
-              <p className="text-sm leading-relaxed text-slate-600">{student.resumeText.skills}</p>
-            </div>
-
-            <div className={`pt-2 ${getHighlightClass(['experience'])}`}>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-teal-700 mb-2">Professional Experience</h2>
-              <p className="text-sm leading-relaxed text-slate-600">{student.resumeText.experience}</p>
-            </div>
-
-            <div className="pt-2">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-teal-700 mb-2">Education</h2>
-              <p className="text-sm leading-relaxed text-slate-600">{student.resumeText.education}</p>
-            </div>
-
-          </div>
-        </div>
+      <div className="flex-1 overflow-hidden p-0 m-0 bg-slate-50 relative">
+        <iframe 
+          src={student.resumeUrl} 
+          className="w-full h-full border-none"
+          title="Resume PDF"
+        />
+        
+        {/* Optional overlay for highlighting (Since iframe is cross-origin or local, we can't easily inject highlights inside it without a PDF.js wrapper, but for now we just show the native PDF) */}
       </div>
     </div>
   );
