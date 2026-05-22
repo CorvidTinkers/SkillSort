@@ -1,8 +1,17 @@
-# STUFF we need to refine 
+## 🔭 The "To Refine" Backlog (Post-Sprint 2)
 
-first: pdfs are all extracted to the server which needs to be fixed
-second: sse needs to be implemented
-third: image-based PDFs (scanned resumes) need an OCR or Vision pipeline because PDFBox cannot extract raw text from pixels
-fourth: dynamic fields
-sixth: database implementation
-seventh: landing page implementation
+**Focus:** Polish, verification, complex edge cases, and external integrations. Do not touch these until Sprint 2 is fully merged and bug-free.
+
+* **Visual PDF Highlighting:** Mapping the AI's extracted text back to the exact X/Y coordinate bounding boxes using `PDFBox` to overlay HTML highlights on the original resume. *(Highly complex)*.
+
+
+* **External Coding Profile Verification:** Scraping GitHub and LeetCode. Web scraping introduces massive latency, CAPTCHA blocks, and rate-limiting issues that will break the fast streaming pipeline.
+
+
+* **OCR / Vision Pipeline for Scanned PDFs:** `PDFBox` cannot read image-based resumes. Fixing this requires routing the image to a multimodal LLM like GPT-4o or integrating Tesseract OCR.
+
+
+* **Spring Security & Auth:** Implementing JWTs, User roles, and Admin definitions. Save this for when the core extraction value is completely proven.
+
+
+* **Cell-Wise SSE Streaming:** Streaming AI data cell-by-cell instead of row-by-row, which will require heavy React state management refactoring.
