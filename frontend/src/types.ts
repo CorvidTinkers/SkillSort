@@ -25,3 +25,12 @@ export interface StudentData {
   };
   knockoutResults: Record<string, boolean>;
 }
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  avatarUrl?: string;
+  ssoProvider?: string;
+}
+

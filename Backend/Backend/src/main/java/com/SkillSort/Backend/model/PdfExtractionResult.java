@@ -4,5 +4,6 @@ public record PdfExtractionResult(
     String id,
     String originalFileName,
     String savedFileName,
-    String rawText
+    String rawText,
+    byte[] pdfBytes
 ) {}
