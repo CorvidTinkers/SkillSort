@@ -1,8 +1,8 @@
 import { FileUp, Inbox, FileText, Check, Plus, X, Briefcase, Sparkles, CheckCircle2, RefreshCw } from 'lucide-react';
 import { useRef, useState } from 'react';
-import {React} from 'react';
+import { React } from 'react';
 interface UploadZoneProps {
-  onUpload: (file: File, hasJd: boolean, checklist: string[]) => void;
+  onUpload: (file: File, hasJd: boolean, jdText: string, checklist: string[]) => void;
   isProcessing?: boolean;
 }
 
@@ -20,7 +20,7 @@ export function UploadZone({ onUpload, isProcessing }: UploadZoneProps) {
     if ((e.type === 'keydown' && (e as React.KeyboardEvent).key !== 'Enter') || !mustHaveInput.trim()) return;
     e.preventDefault();
     if (!mustHaves.includes(mustHaveInput.trim())) {
-        setMustHaves([...mustHaves, mustHaveInput.trim()]);
+      setMustHaves([...mustHaves, mustHaveInput.trim()]);
     }
     setMustHaveInput('');
   };
@@ -45,7 +45,7 @@ export function UploadZone({ onUpload, isProcessing }: UploadZoneProps) {
   const handleProceed = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (selectedFile) {
-      onUpload(selectedFile, haveJd, mustHaves);
+      onUpload(selectedFile, haveJd, jdText, mustHaves);
     }
   };
 
@@ -53,7 +53,7 @@ export function UploadZone({ onUpload, isProcessing }: UploadZoneProps) {
     e.stopPropagation();
     setSelectedFile(null);
     if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      fileInputRef.current.value = '';
     }
   };
 
@@ -69,11 +69,11 @@ export function UploadZone({ onUpload, isProcessing }: UploadZoneProps) {
       </div>
 
       <div className={`flex flex-row items-stretch gap-6 transition-all duration-500 ease-in-out w-full ${haveJd ? 'max-w-5xl' : 'max-w-2xl'}`}>
-        
+
         {/* Left Side: Toggle & Drop Zone */}
         <div className={`flex flex-col gap-4 transition-all duration-500 ${haveJd ? 'w-1/2' : 'w-full'}`}>
-          <button 
-            onClick={() => setHaveJd(!haveJd)} 
+          <button
+            onClick={() => setHaveJd(!haveJd)}
             className={`flex items-center justify-between p-4 rounded-xl border transition-all ${haveJd ? 'bg-primary/5 border-primary shadow-sm' : 'bg-white border-slate-200 hover:border-primary/50'}`}
           >
             <div className="flex items-center gap-3">
@@ -102,7 +102,7 @@ export function UploadZone({ onUpload, isProcessing }: UploadZoneProps) {
                 <p className="text-slate-500 mb-8 font-medium">
                   {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
                 </p>
-                
+
                 <div className="flex items-center gap-3 w-full">
                   <button
                     onClick={handleCancel}
@@ -131,19 +131,19 @@ export function UploadZone({ onUpload, isProcessing }: UploadZoneProps) {
                 </p>
                 {!isProcessing && (
                   <div className="flex items-center gap-4 text-sm text-slate-400">
-                    <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-1 rounded-full"><FileText size={14}/> PDF</span>
-                    <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-1 rounded-full"><Inbox size={14}/> ZIP</span>
-                    <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-1 rounded-full"><FileText size={14}/> CSV</span>
+                    <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-1 rounded-full"><FileText size={14} /> PDF</span>
+                    <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-1 rounded-full"><Inbox size={14} /> ZIP</span>
+                    <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-1 rounded-full"><FileText size={14} /> CSV</span>
                   </div>
                 )}
               </>
             )}
-            <input 
-              type="file" 
-            accept=".zip" 
-              className="hidden" 
-              ref={fileInputRef} 
-              onChange={handleFileChange} 
+            <input
+              type="file"
+              accept=".zip"
+              className="hidden"
+              ref={fileInputRef}
+              onChange={handleFileChange}
             />
           </div>
         </div>
@@ -169,7 +169,7 @@ export function UploadZone({ onUpload, isProcessing }: UploadZoneProps) {
             />
 
             <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-              <button 
+              <button
                 onClick={() => setEnableAts(!enableAts)}
                 className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-slate-900 group"
               >
@@ -179,7 +179,7 @@ export function UploadZone({ onUpload, isProcessing }: UploadZoneProps) {
                 Enable ATS Engine?
               </button>
 
-              <button 
+              <button
                 onClick={() => setShowMustHaves(!showMustHaves)}
                 className={`flex items-center gap-1.5 text-sm font-bold transition-colors ${showMustHaves ? 'text-primary' : 'text-slate-500 hover:text-slate-800'}`}
               >
@@ -198,14 +198,14 @@ export function UploadZone({ onUpload, isProcessing }: UploadZoneProps) {
                   onKeyDown={handleAddMustHave}
                   className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
                 />
-                <button 
+                <button
                   onClick={handleAddMustHave}
                   className="bg-primary hover:bg-primary-container text-white px-3 py-2 rounded-lg transition flex items-center justify-center"
                 >
                   <Plus size={18} />
                 </button>
               </div>
-              
+
               <div className="flex flex-wrap gap-2">
                 {mustHaves.map(item => (
                   <span key={item} className="inline-flex items-center gap-1.5 bg-slate-100 border border-slate-200 text-slate-700 px-2.5 py-1 rounded-md text-xs font-semibold">

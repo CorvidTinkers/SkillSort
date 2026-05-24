@@ -67,11 +67,40 @@ public class ExtractionAgent {
             inprogresscnt++;
         }
         
+        
         // Fallback: If it failed after 3 tries, populate with dummy data to avoid null pointer exceptions
         for (String field : fieldsToExtract) {
             finalResult.putIfAbsent(field, new ExtractedField("Not Provided", "low"));
         }
         
         return finalResult;
+    }
+
+    public Map<String, Boolean> evaluateKnockoutCriteria(String rawPdfText, List<String> checklist) {
+        if (checklist == null || checklist.isEmpty()) {
+            return new HashMap<>();
+        }
+        
+        String userPrompt = "Resume raw data:\n\n" + rawPdfText;
+        String systemPrompt = "You are a strict HR ATS Knockout evaluator. " +
+            "Evaluate if the resume meets each of the following mandatory criteria: " + 
+            String.join(", ", checklist) + ". " +
+            "Return a strict JSON object mapping the exact criteria string to a boolean (true if met, false if unmet). " +
+            "Do not return anything else except the JSON.";
+            
+        try {
+            return chatClient.prompt()
+                    .system(systemPrompt)
+                    .user(userPrompt)
+                    .call()
+                    .entity(new ParameterizedTypeReference<Map<String, Boolean>>() {});
+        } catch (Exception e) {
+            System.err.println("Knockout evaluation failed: " + e.getMessage());
+            Map<String, Boolean> fallback = new HashMap<>();
+            for (String item : checklist) {
+                fallback.put(item, false);
+            }
+            return fallback;
+        }
     }
 }

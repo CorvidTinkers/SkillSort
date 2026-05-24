@@ -4,16 +4,26 @@ interface CandidateResult {
   id: string;
   fileName: string;
   extractedData: Record<string, ExtractedField>;
+  atsScore: ExtractedField;
+  knockoutResults: Record<string, boolean>;
 }
 
 export const extractResumesBatch = async (
   zipFile: File, 
   fields: string[],
+  jdText: string,
+  checklist: string[],
   onCandidateReceived: (student: StudentData) => void
 ): Promise<void> => {
   const formData = new FormData();
   formData.append('file', zipFile);
   fields.forEach(f => formData.append('fields', f));
+  if (jdText) {
+    formData.append('jobDescription', jdText);
+  }
+  if (checklist && checklist.length > 0) {
+    checklist.forEach(c => formData.append('checklist', c));
+  }
 
   const response = await fetch('http://localhost:8080/api/resumes/extract', {
     method: 'POST',
@@ -54,7 +64,7 @@ export const extractResumesBatch = async (
               skills: result.extractedData.skills || { value: 'N/A', confidence: 'low' },
               experience: result.extractedData.experience || { value: 'N/A', confidence: 'low' },
               role: result.extractedData.role || { value: 'N/A', confidence: 'low' },
-              atsScore: result.extractedData.atsScore || { value: 50, confidence: 'low' },
+              atsScore: result.atsScore || { value: 50, confidence: 'low' },
               githubInfo: result.extractedData.githubInfo || { value: 'N/A', confidence: 'low' },
               resumeUrl: `http://localhost:8080/resumes/${result.fileName}`, // The backend mapped the static URL here
               resumeText: {
@@ -64,7 +74,8 @@ export const extractResumesBatch = async (
                 skills: String(result.extractedData.skills?.value || ''),
                 experience: String(result.extractedData.experience?.value || ''),
                 education: ''
-              }
+              },
+              knockoutResults: result.knockoutResults || {}
             };
             
             onCandidateReceived(student);

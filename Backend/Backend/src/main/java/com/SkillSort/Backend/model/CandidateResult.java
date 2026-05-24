@@ -5,5 +5,7 @@ import java.util.Map;
 public record CandidateResult(
     String id,
     String fileName,
-    Map<String, ExtractedField> extractedData
+    Map<String, ExtractedField> extractedData,
+    ExtractedField atsScore,
+    Map<String, Boolean> knockoutResults
 ) {}

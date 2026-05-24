@@ -23,4 +23,5 @@ export interface StudentData {
     experience: string;
     education: string;
   };
+  knockoutResults: Record<string, boolean>;
 }

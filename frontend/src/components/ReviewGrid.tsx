@@ -202,15 +202,15 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
         let dotColor = '';
         let label = '';
         
-        if (score >= 90) {
+        if (score >= 80) {
           pillStyles = 'bg-emerald-50 text-emerald-800 border-emerald-200/60';
           dotColor = 'bg-emerald-500';
           label = 'Outstanding';
-        } else if (score >= 80) {
+        } else if (score >= 70) {
           pillStyles = 'bg-primary/5 text-primary border-primary/20';
           dotColor = 'bg-primary';
           label = 'Strong Match';
-        } else if (score >= 70) {
+        } else if (score >= 60) {
           pillStyles = 'bg-amber-50 text-amber-800 border-amber-200/60';
           dotColor = 'bg-amber-500';
           label = 'Good Match';
@@ -547,24 +547,47 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
           </div>
 
           {/* Knockout Checklist Toggle */}
-          <button 
-            type="button"
-            disabled={!hasJobDescription}
-            onClick={() => {
-              setWeightsOpen(!weightsOpen);
-              setColumnsMenuOpen(false);
-            }}
-            className={`flex items-center gap-1.5 text-xs font-bold bg-white border px-3 py-2 rounded-lg transition shadow-sm ${
-              !hasJobDescription 
-                ? 'opacity-50 cursor-not-allowed border-slate-200 text-slate-400' 
-                : weightsOpen 
-                  ? 'border-primary text-primary cursor-pointer' 
-                  : 'text-slate-600 hover:text-slate-900 border-slate-200 hover:border-slate-300 cursor-pointer'
-            }`}
-            title={!hasJobDescription ? "Enable ATS with a Job Description first to use the Checklist" : ""}
-          >
-            <ListChecks size={13} /> ATS Knockout Checklist
-          </button>
+          <div className="relative">
+            <button 
+              type="button"
+              disabled={!hasJobDescription}
+              onClick={() => {
+                setWeightsOpen(!weightsOpen);
+                setColumnsMenuOpen(false);
+              }}
+              className={`flex items-center gap-1.5 text-xs font-bold bg-white border px-3 py-2 rounded-lg transition shadow-sm ${
+                !hasJobDescription 
+                  ? 'opacity-50 cursor-not-allowed border-slate-200 text-slate-400' 
+                  : weightsOpen 
+                    ? 'border-primary text-primary cursor-pointer' 
+                    : 'text-slate-600 hover:text-slate-900 border-slate-200 hover:border-slate-300 cursor-pointer'
+              }`}
+              title={!hasJobDescription ? "Enable ATS with a Job Description first to use the Checklist" : ""}
+            >
+              <ListChecks size={13} /> ATS Knockout Checklist
+            </button>
+            
+            {weightsOpen && hasJobDescription && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setWeightsOpen(false)} />
+                <div className="absolute left-0 top-full mt-2 w-72 bg-slate-900 text-slate-100 rounded-xl shadow-xl border border-slate-800 p-3.5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Required Criteria</span>
+                  </div>
+                  <div className="space-y-1.5 max-h-64 overflow-y-auto pr-0.5">
+                    {(checklistItems && checklistItems.length > 0) ? checklistItems.map((item, idx) => (
+                      <div key={idx} className="flex items-start gap-2.5 p-2.5 rounded-md bg-slate-800/60 border border-slate-700/50">
+                        <CheckCircle2 size={14} className="text-primary shrink-0 mt-0.5" />
+                        <span className="text-xs font-medium text-slate-200 leading-snug">{item}</span>
+                      </div>
+                    )) : (
+                      <p className="text-center text-xs text-slate-500 py-3">No knockout criteria found.</p>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
           {/* Fallback ATS Run Button */}
           <button 
@@ -586,42 +609,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
         </button>
       </div>
 
-      {/* ATS Knockout Checklist Drawer */}
-      {weightsOpen && hasJobDescription && (
-        <div className="bg-slate-50 border-b border-slate-200 p-5 shrink-0 transition-all select-none animate-in slide-in-from-top duration-300">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <ListChecks size={16} className="text-primary" />
-                <span className="text-sm font-bold text-slate-800 tracking-tight">ATS Knockout Checklist</span>
-                <span className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full border border-primary/20">Extracted from JD</span>
-              </div>
-              <button 
-                type="button"
-                onClick={() => setWeightsOpen(false)}
-                className="text-slate-400 hover:text-slate-600 text-xs font-bold transition"
-              >
-                Dismiss Panel
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {(checklistItems && checklistItems.length > 0) ? checklistItems.map((item, idx) => (
-                <div key={idx} className="flex items-start gap-3 bg-white p-3.5 rounded-xl border border-slate-200">
-                  <div className="mt-0.5 shrink-0">
-                    <CheckCircle2 size={16} className="text-primary" />
-                  </div>
-                  <span className="text-sm font-medium text-slate-700 leading-snug">{item}</span>
-                </div>
-              )) : (
-                <div className="col-span-1 md:col-span-2 text-center py-6 bg-white border border-slate-200 border-dashed rounded-xl">
-                  <p className="text-sm font-medium text-slate-500">No strict knockout criteria found. ATS logic will run purely on vector embeddings.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Grid Canvas */}
       <div className="flex-1 overflow-auto bg-white relative">

@@ -1,6 +1,7 @@
 package com.SkillSort.Backend.controller;
 
 import com.SkillSort.Backend.service.PdfService;
+import com.SkillSort.Backend.service.ATSService;
 import com.SkillSort.Backend.agent.ExtractionAgent;
 import com.SkillSort.Backend.model.CandidateResult;
 import com.SkillSort.Backend.model.ExtractedField;
@@ -14,6 +15,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -27,12 +29,17 @@ public class ResumeController {
     @Autowired
     private ExtractionAgent extractionAgent;
 
+    @Autowired
+    private ATSService atsService;
+
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
     @PostMapping(value = "/extract", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public SseEmitter extractResumeData(
             @RequestPart("file") MultipartFile zipFile,
-            @RequestParam("fields") List<String> fields) {
+            @RequestParam("fields") List<String> fields,
+            @RequestParam(value = "jobDescription", required = false) String jobDescription,
+            @RequestParam(value = "checklist", required = false) List<String> checklist) {
         
         SseEmitter emitter = new SseEmitter(180_000L); // 3-minute timeout
         
@@ -41,31 +48,36 @@ public class ResumeController {
                 // 1. Extract plain texts and save files to backend disk
                 List<PdfExtractionResult> rawTexts = pdfService.extractFromZip(zipFile);
                 
-                // 2. Process each text through the AI Agent sequentially and stream
+                // 2. Process each text through the AI Agents concurrently and stream
                 for (PdfExtractionResult entry : rawTexts) {
-                    Map<String, ExtractedField> extractedFields = extractionAgent.extractFields(entry.rawText(), fields);
                     
-                    CandidateResult result = new CandidateResult(
-                        entry.id(),
-                        entry.originalFileName(),
-                        extractedFields
-                    );
+                    // Task A: Asynchronous LLM Extraction (Groq)
+                    CompletableFuture<Map<String, ExtractedField>> extractionFuture = CompletableFuture.supplyAsync(
+                            () -> extractionAgent.extractFields(entry.rawText(), fields), executor);
+                            
+                    // Task B: Asynchronous Local ATS Embedding Match
+                    CompletableFuture<ExtractedField> atsFuture = CompletableFuture.supplyAsync(
+                            () -> atsService.calculateMatchScore(entry.rawText(), jobDescription), executor);
+                            
+                    // Task C: Asynchronous LLM Knockout Evaluation
+                    CompletableFuture<Map<String, Boolean>> knockoutFuture = CompletableFuture.supplyAsync(
+                            () -> extractionAgent.evaluateKnockoutCriteria(entry.rawText(), checklist), executor);
+                            
+                    // Wait for all to complete
+                    CompletableFuture.allOf(extractionFuture, atsFuture, knockoutFuture).join();
                     
-                    // Attach the persistent backend resume URL inside the extracted data manually
-                    // or simply pass the URL as part of the frontend structure processing.
-                    // We'll map "resumeUrl" dynamically in the frontend using the ID and original fileName.
-                    // Actually, let's just send it via SSE and let frontend build the URL based on savedFileName.
-                    // But CandidateResult doesn't have savedFileName. We will use id.
-                    // Let's pass the saved filename to the client.
-                    // wait, CandidateResult record takes UUID.
-                    // we can just tell frontend to fetch /resumes/savedFileName
+                    Map<String, ExtractedField> extractedFields = extractionFuture.get();
+                    ExtractedField atsScore = atsFuture.get();
+                    Map<String, Boolean> knockoutResults = knockoutFuture.get();
                     
                     emitter.send(SseEmitter.event()
                         .name("candidate")
                         .data(new CandidateResult(
                             entry.id(),
                             entry.savedFileName(), // overriding fileName with savedFileName so frontend knows exactly where to fetch it
-                            extractedFields
+                            extractedFields,
+                            atsScore,
+                            knockoutResults
                         )));
                 }
                 

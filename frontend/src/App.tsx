@@ -65,7 +65,7 @@ export default function App() {
     document.addEventListener('mouseup', handleMouseUp);
   };
 
-  const handleUpload = async (file: File, hasJd: boolean, checklist: string[]) => {
+  const handleUpload = async (file: File, hasJd: boolean, jdText: string, checklist: string[]) => {
     setIsProcessing(true);
     setHasUploaded(true);
     setHasJobDescription(hasJd);
@@ -73,10 +73,10 @@ export default function App() {
     setStudents([]); // Clear existing if any
     
     try {
-      const targetFields = ['name', 'domain', 'skills', 'experience', 'role', 'atsScore', 'githubInfo'];
+      const targetFields = ['name', 'domain', 'skills', 'experience', 'role', 'githubInfo'];
       let isFirst = true;
       
-      await extractResumesBatch(file, targetFields, (student) => {
+      await extractResumesBatch(file, targetFields, jdText, checklist, (student) => {
         setStudents(prev => [...prev, student]);
         
         if (isFirst) {
