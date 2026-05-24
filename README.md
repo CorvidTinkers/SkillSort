@@ -26,17 +26,40 @@ SkillSort is a web-based B2B platform designed to solve a major administrative b
 * **AI Integration:** Spring Boot HTTP client (`RestTemplate` or `WebClient`) routing to an LLM API 
 * **Data Handling:** Jackson (for parsing and structuring the LLM's JSON output) 
 
-## ⚙️ Getting Started
-
-*(Placeholder for local installation instructions)*
+# ⚙️ Getting Started
 
 ### Prerequisites
-* Node.js (v18+)
-* Java Development Kit (JDK 17+)
-* Maven
-* An active API key for your chosen LLM provider
+- Node.js (v18+)
+- Java Development Kit (JDK 17+)
+- Maven
+- Docker (optional, for containerized deployment)
+- An active API key for your chosen LLM provider
 
-### Local Setup
-1. **Clone the repository**
-   ```bash
-   git clone [https://github.com/yourusername/skillsort.git](https://github.com/yourusername/skillsort.git)
+### Backend Setup
+```bash
+# Navigate to backend directory
+cd Backend/Backend
+
+# Verify Java version (should be 17 or higher)
+java -version
+
+# Build and run the Spring Boot application
+./mvnw spring-boot:run
+```
+
+### Frontend Setup
+```bash
+# From project root, go to the frontend directory
+cd ../../frontend
+
+# Install dependencies and start the development server
+npm install
+npm run dev
+```
+
+### Environment Variables
+Create a `.env` file in the `Backend/Backend` directory containing:
+```
+GROQ_API_KEY=your_api_key_here
+```
+Ensure the key is loaded by the Spring application at startup.

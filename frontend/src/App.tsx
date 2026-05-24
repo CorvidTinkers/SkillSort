@@ -13,6 +13,8 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
   const [activeField, setActiveField] = useState<keyof StudentData | null>(null);
+  const [hasJobDescription, setHasJobDescription] = useState(false);
+  const [checklistItems, setChecklistItems] = useState<string[]>([]);
   const [view, setView] = useState<'grid' | 'dashboard'>('grid');
 
   const [resumeWidth, setResumeWidth] = useState(40); // percentage of width for resume viewer (default 40%)
@@ -63,9 +65,11 @@ export default function App() {
     document.addEventListener('mouseup', handleMouseUp);
   };
 
-  const handleUpload = async (file: File) => {
+  const handleUpload = async (file: File, hasJd: boolean, checklist: string[]) => {
     setIsProcessing(true);
     setHasUploaded(true);
+    setHasJobDescription(hasJd);
+    setChecklistItems(checklist);
     setStudents([]); // Clear existing if any
     
     try {
@@ -159,6 +163,8 @@ export default function App() {
                 onSelectCell={handleSelectCell}
                 activeStudentId={activeStudentId}
                 activeField={activeField}
+                hasJobDescription={hasJobDescription}
+                checklistItems={checklistItems}
               />
             </div>
             

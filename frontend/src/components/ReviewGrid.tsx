@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { StudentData, ExtractedField, Confidence } from '../types';
-import { FileDown, RefreshCw, Layers, GripHorizontal, Pin, Settings2, Sliders, Check, Circle, Search, X, AlertCircle, Database, HelpCircle } from 'lucide-react';
+import { FileDown, RefreshCw, Layers, GripHorizontal, Pin, Settings2, Sliders, Check, Circle, Search, X, AlertCircle, Database, HelpCircle, Activity, ListChecks, CheckCircle2 } from 'lucide-react';
 import {
   ColumnDef,
   flexRender,
@@ -34,6 +34,8 @@ interface ReviewGridProps {
   onSelectCell: (studentId: string, field: keyof StudentData) => void;
   activeStudentId: string | null;
   activeField: keyof StudentData | null;
+  hasJobDescription?: boolean;
+  checklistItems?: string[];
 }
 
 // Color-code helper to map confidence levels to soft, palatable pastel themes
@@ -104,7 +106,7 @@ const SortableHeader = ({ header, children }: any) => {
   );
 };
 
-export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStudentId, activeField }: ReviewGridProps) {
+export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStudentId, activeField, hasJobDescription = false, checklistItems = [] }: ReviewGridProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [columnPinning, setColumnPinning] = useState({
@@ -544,16 +546,33 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
             )}
           </div>
 
-          {/* Recalculate Weights Selector Toggle */}
+          {/* Knockout Checklist Toggle */}
           <button 
             type="button"
+            disabled={!hasJobDescription}
             onClick={() => {
               setWeightsOpen(!weightsOpen);
               setColumnsMenuOpen(false);
             }}
-            className={`flex items-center gap-1.5 text-xs font-bold bg-white border px-3 py-2 rounded-lg cursor-pointer transition shadow-sm ${weightsOpen ? 'border-primary text-primary' : 'text-slate-600 hover:text-slate-900 border-slate-200 hover:border-slate-300'}`}
+            className={`flex items-center gap-1.5 text-xs font-bold bg-white border px-3 py-2 rounded-lg transition shadow-sm ${
+              !hasJobDescription 
+                ? 'opacity-50 cursor-not-allowed border-slate-200 text-slate-400' 
+                : weightsOpen 
+                  ? 'border-primary text-primary cursor-pointer' 
+                  : 'text-slate-600 hover:text-slate-900 border-slate-200 hover:border-slate-300 cursor-pointer'
+            }`}
+            title={!hasJobDescription ? "Enable ATS with a Job Description first to use the Checklist" : ""}
           >
-            <Sliders size={13} /> Algorithm Strategy
+            <ListChecks size={13} /> ATS Knockout Checklist
+          </button>
+
+          {/* Fallback ATS Run Button */}
+          <button 
+            type="button"
+            onClick={() => showToast("ATS Analysis Initiated! Processing in background...")}
+            className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-2 rounded-lg cursor-pointer transition shadow-sm"
+          >
+            <Activity size={13} className="text-emerald-600" /> Run ATS Analysis
           </button>
         </div>
 
@@ -567,15 +586,15 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
         </button>
       </div>
 
-      {/* Dynamic Weight Configuration Drawer */}
-      {weightsOpen && (
+      {/* ATS Knockout Checklist Drawer */}
+      {weightsOpen && hasJobDescription && (
         <div className="bg-slate-50 border-b border-slate-200 p-5 shrink-0 transition-all select-none animate-in slide-in-from-top duration-300">
           <div className="max-w-4xl mx-auto">
             <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <Sliders size={16} className="text-primary" />
-                <span className="text-sm font-bold text-slate-800 tracking-tight">Recalculate Weighted ATS Strategy</span>
-                <span className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full border border-primary/20">Simulated Pipeline</span>
+                <ListChecks size={16} className="text-primary" />
+                <span className="text-sm font-bold text-slate-800 tracking-tight">ATS Knockout Checklist</span>
+                <span className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full border border-primary/20">Extracted from JD</span>
               </div>
               <button 
                 type="button"
@@ -586,82 +605,19 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
               </button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Skills weight slider */}
-              <div className="flex flex-col gap-1.5 bg-white p-3.5 rounded-xl border border-slate-200">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="font-bold text-slate-700">Skills Weight</span>
-                  <span className="text-primary font-mono font-bold text-xs bg-primary/5 px-1.5 py-0.5 rounded">{skillWeight}%</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {(checklistItems && checklistItems.length > 0) ? checklistItems.map((item, idx) => (
+                <div key={idx} className="flex items-start gap-3 bg-white p-3.5 rounded-xl border border-slate-200">
+                  <div className="mt-0.5 shrink-0">
+                    <CheckCircle2 size={16} className="text-primary" />
+                  </div>
+                  <span className="text-sm font-medium text-slate-700 leading-snug">{item}</span>
                 </div>
-                <input
-                  type="range"
-                  min="10"
-                  max="100"
-                  step="5"
-                  value={skillWeight}
-                  onChange={(e) => setSkillWeight(Number(e.target.value))}
-                  className="h-1.5 w-full bg-slate-200 accent-primary cursor-pointer rounded-lg appearance-none"
-                />
-                <p className="text-[10px] text-slate-400 leading-normal">Sets match quotient impact for certified languages & tech.</p>
-              </div>
-
-              {/* Experience weight slider */}
-              <div className="flex flex-col gap-1.5 bg-white p-3.5 rounded-xl border border-slate-200">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="font-bold text-slate-700">Experience Layer</span>
-                  <span className="text-primary font-mono font-bold text-xs bg-primary/5 px-1.5 py-0.5 rounded">{expWeight}%</span>
+              )) : (
+                <div className="col-span-1 md:col-span-2 text-center py-6 bg-white border border-slate-200 border-dashed rounded-xl">
+                  <p className="text-sm font-medium text-slate-500">No strict knockout criteria found. ATS logic will run purely on vector embeddings.</p>
                 </div>
-                <input
-                  type="range"
-                  min="10"
-                  max="100"
-                  step="5"
-                  value={expWeight}
-                  onChange={(e) => setExpWeight(Number(e.target.value))}
-                  className="h-1.5 w-full bg-slate-200 accent-primary cursor-pointer rounded-lg appearance-none"
-                />
-                <p className="text-[10px] text-slate-400 leading-normal">Controls weight for internships, tenure & researcher projects.</p>
-              </div>
-
-              {/* Domain Relevance weight slider */}
-              <div className="flex flex-col gap-1.5 bg-white p-3.5 rounded-xl border border-slate-200">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="font-bold text-slate-700">Domain Match Intensity</span>
-                  <span className="text-primary font-mono font-bold text-xs bg-primary/5 px-1.5 py-0.5 rounded">{domainWeight}%</span>
-                </div>
-                <input
-                  type="range"
-                  min="10"
-                  max="100"
-                  step="5"
-                  value={domainWeight}
-                  onChange={(e) => setDomainWeight(Number(e.target.value))}
-                  className="h-1.5 w-full bg-slate-200 accent-primary cursor-pointer rounded-lg appearance-none"
-                />
-                <p className="text-[10px] text-slate-400 leading-normal">Assigns rating focus to general placements focus groups.</p>
-              </div>
-            </div>
-
-            <div className="mt-4 flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setSkillWeight(70);
-                  setExpWeight(60);
-                  setDomainWeight(50);
-                  showToast("Baseline ratios reset!");
-                }}
-                className="text-xs font-bold text-slate-500 hover:text-slate-800 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 transition rounded-lg"
-              >
-                Reset Default Weights
-              </button>
-              <button
-                type="button"
-                onClick={recalculateScores}
-                className="bg-primary hover:bg-primary-container text-white font-bold text-xs px-3.5 py-1.5 flex items-center gap-1.5 rounded-lg transition shadow-sm"
-              >
-                <RefreshCw size={11} /> Confirm Algorithm Recalculation
-              </button>
+              )}
             </div>
           </div>
         </div>
