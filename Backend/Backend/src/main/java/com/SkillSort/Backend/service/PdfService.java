@@ -7,12 +7,7 @@ import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -22,14 +17,11 @@ import java.util.zip.ZipInputStream;
 @Service
 public class PdfService {
 
-    private final Path storagePath = Paths.get("uploads", "resumes");
-
     public List<PdfExtractionResult> extractFromZip(MultipartFile zipFile) throws IOException {
         if (zipFile.isEmpty()) {
             throw new IllegalArgumentException("Cannot parse an empty file!");
         }
 
-        Files.createDirectories(storagePath);
         List<PdfExtractionResult> extractedResults = new ArrayList<>();
 
         try (ZipInputStream zis = new ZipInputStream(zipFile.getInputStream())) {
@@ -40,13 +32,8 @@ public class PdfService {
                     
                     String id = UUID.randomUUID().toString();
                     String savedFileName = id + ".pdf";
-                    File targetFile = storagePath.resolve(savedFileName).toFile();
-                    
-                    try (FileOutputStream fos = new FileOutputStream(targetFile)) {
-                        fos.write(pdfBytes);
-                    }
 
-                    try (PDDocument document = Loader.loadPDF(targetFile)) {
+                    try (PDDocument document = Loader.loadPDF(pdfBytes)) {
                         PDFTextStripper stripper = new PDFTextStripper();
                         stripper.setSortByPosition(true);
                         String text = stripper.getText(document);
@@ -55,10 +42,12 @@ public class PdfService {
                             id,
                             entry.getName(),
                             savedFileName,
-                            text.trim()
+                            text.trim(),
+                            pdfBytes
                         ));
                     } catch (Exception e) {
-                        System.err.println("Failed to parse PDF: " + entry.getName());
+                        System.err.println("Failed to parse PDF in memory: " + entry.getName());
+                        e.printStackTrace();
                     }
                 }
                 zis.closeEntry();

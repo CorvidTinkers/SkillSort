@@ -1,4 +1,4 @@
-import { StudentData, ExtractedField } from '../types';
+import { StudentData, ExtractedField, User } from '../types';
 
 interface CandidateResult {
   id: string;
@@ -8,8 +8,128 @@ interface CandidateResult {
   knockoutResults: Record<string, boolean>;
 }
 
+const BASE_URL = 'http://localhost:8080';
+
+const getAuthHeaders = (): Record<string, string> => {
+  const token = localStorage.getItem('skillsort_token');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+};
+
+export const loginWithSSO = async (
+  id: string,
+  email: string,
+  name: string,
+  provider: string,
+  avatarUrl?: string
+): Promise<{ token: string; user: User }> => {
+  const response = await fetch(`${BASE_URL}/api/auth/sso`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ id, email, name, ssoProvider: provider, avatarUrl }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.json().catch(() => ({ error: 'Failed to authenticate' }));
+    throw new Error(errorText.error || 'Failed to authenticate');
+  }
+
+  const data = await response.json();
+  localStorage.setItem('skillsort_token', data.token);
+  return data;
+};
+
+export const signUpWithCredentials = async (
+  name: string,
+  email: string,
+  password: string
+): Promise<{ token: string; user: User }> => {
+  const response = await fetch(`${BASE_URL}/api/auth/signup`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ name, email, password }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.json().catch(() => ({ error: 'Failed to sign up' }));
+    throw new Error(errorText.error || 'Failed to sign up');
+  }
+
+  const data = await response.json();
+  localStorage.setItem('skillsort_token', data.token);
+  return data;
+};
+
+export const loginWithCredentials = async (
+  email: string,
+  password: string
+): Promise<{ token: string; user: User }> => {
+  const response = await fetch(`${BASE_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.json().catch(() => ({ error: 'Failed to log in' }));
+    throw new Error(errorText.error || 'Failed to log in');
+  }
+
+  const data = await response.json();
+  localStorage.setItem('skillsort_token', data.token);
+  return data;
+};
+
+export const fetchSavedCandidates = async (): Promise<StudentData[]> => {
+  const response = await fetch(`${BASE_URL}/api/resumes/list`, {
+    method: 'GET',
+    headers: {
+      ...getAuthHeaders(),
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('skillsort_token');
+      throw new Error('Unauthorized');
+    }
+    const errorText = await response.text();
+    throw new Error(errorText || 'Failed to fetch saved candidates');
+  }
+
+  const results = await response.json();
+  return results.map((result: any) => {
+    const extractedData = result.extractedData || {};
+    return {
+      id: result.id,
+      name: extractedData.name || { value: result.filename, confidence: 'low' },
+      domain: extractedData.domain || { value: 'N/A', confidence: 'low' },
+      skills: extractedData.skills || { value: 'N/A', confidence: 'low' },
+      experience: extractedData.experience || { value: 'N/A', confidence: 'low' },
+      role: extractedData.role || { value: 'N/A', confidence: 'low' },
+      atsScore: { value: result.ats_score !== undefined ? `${Math.round(result.ats_score)}%` : '50%', confidence: 'high' },
+      githubInfo: extractedData.githubInfo || { value: 'N/A', confidence: 'low' },
+      resumeUrl: `${BASE_URL}/api/resumes/blob/${result.id}?token=${encodeURIComponent(localStorage.getItem('skillsort_token') || '')}`,
+      resumeText: {
+        header: result.filename,
+        contact: 'Extracted via AI',
+        summary: '',
+        skills: String(extractedData.skills?.value || ''),
+        experience: String(extractedData.experience?.value || ''),
+        education: ''
+      },
+      knockoutResults: result.knockoutResults || {}
+    };
+  });
+};
+
 export const extractResumesBatch = async (
-  zipFile: File, 
+  zipFile: File,
   fields: string[],
   jdText: string,
   checklist: string[],
@@ -25,8 +145,11 @@ export const extractResumesBatch = async (
     checklist.forEach(c => formData.append('checklist', c));
   }
 
-  const response = await fetch('http://localhost:8080/api/resumes/extract', {
+  const response = await fetch(`${BASE_URL}/api/resumes/extract`, {
     method: 'POST',
+    headers: {
+      ...getAuthHeaders(),
+    },
     body: formData,
   });
 
@@ -44,19 +167,17 @@ export const extractResumesBatch = async (
     if (done) break;
 
     buffer += decoder.decode(value, { stream: true });
-    
-    // SSE blocks are separated by double newlines
+
     const chunks = buffer.split('\n\n');
-    buffer = chunks.pop() || ''; // Keep the incomplete chunk in the buffer
+    buffer = chunks.pop() || '';
 
     for (const chunk of chunks) {
       if (chunk.trim().startsWith('event:candidate') || chunk.trim().startsWith('data:')) {
-        // Extract the JSON payload after 'data:'
         const dataMatch = chunk.match(/data:(.+)/);
         if (dataMatch && dataMatch[1]) {
           try {
             const result: CandidateResult = JSON.parse(dataMatch[1].trim());
-            
+
             const student: StudentData = {
               id: result.id,
               name: result.extractedData.name || { value: result.fileName, confidence: 'low' },
@@ -64,9 +185,9 @@ export const extractResumesBatch = async (
               skills: result.extractedData.skills || { value: 'N/A', confidence: 'low' },
               experience: result.extractedData.experience || { value: 'N/A', confidence: 'low' },
               role: result.extractedData.role || { value: 'N/A', confidence: 'low' },
-              atsScore: result.atsScore || { value: 50, confidence: 'low' },
+              atsScore: result.atsScore || { value: '50%', confidence: 'low' },
               githubInfo: result.extractedData.githubInfo || { value: 'N/A', confidence: 'low' },
-              resumeUrl: `http://localhost:8080/resumes/${result.fileName}`, // The backend mapped the static URL here
+              resumeUrl: `${BASE_URL}/api/resumes/blob/${result.id}?token=${encodeURIComponent(localStorage.getItem('skillsort_token') || '')}`,
               resumeText: {
                 header: result.fileName,
                 contact: 'Extracted via AI',
@@ -77,7 +198,7 @@ export const extractResumesBatch = async (
               },
               knockoutResults: result.knockoutResults || {}
             };
-            
+
             onCandidateReceived(student);
           } catch (e) {
             console.error('Failed to parse SSE data chunk:', e);
@@ -87,4 +208,3 @@ export const extractResumesBatch = async (
     }
   }
 };
-
