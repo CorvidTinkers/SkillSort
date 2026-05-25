@@ -9,8 +9,8 @@ COPY . .
 RUN chmod +x mvnw
 RUN ./mvnw clean package -DskipTests
 
-# Stage 2: Production Runtime Stage
-FROM eclipse-temurin:21-jre-alpine
+# Stage 2: Production Runtime Stage (Standard Debian/Ubuntu JRE for native library compatibility)
+FROM eclipse-temurin:21-jre
 WORKDIR /app
 
 # Create a dedicated directory for persistent SQLite storage
