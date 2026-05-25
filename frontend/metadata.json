@@ -1,0 +1,8 @@
+{
+  "name": "Remix: SkillSort",
+  "description": "B2B platform for college placement cells to automate bulk AI resume parsing and candidate ranking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
