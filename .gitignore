@@ -1,0 +1,42 @@
+# Dependency Directories
+node_modules/
+**/node_modules/
+
+# Frontend Build & Cache
+frontend/dist/
+frontend/build/
+frontend/coverage/
+frontend/.vite/
+frontend/.env*
+!frontend/.env.example
+.DS_Store
+
+# Backend Build & Target
+Backend/Backend/target/
+Backend/Backend/.settings/
+Backend/Backend/.springBeans/
+Backend/Backend/.sts4-cache/
+Backend/Backend/bin/
+**/target/
+**/*.class
+
+# Databases & SQLite
+*.db
+**/*.db
+Backend/Backend/skillsort.db
+Backend/skillsort.db
+
+# Uploads & User Media
+Backend/Backend/uploads/
+uploads/
+**/uploads/
+
+# IDE Configuration
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.settings/
+.classpath
+.project
