@@ -23,8 +23,12 @@ COPY --from=builder /app/target/Backend-0.0.1-SNAPSHOT.jar app.jar
 ENV PORT=8080
 ENV SQLITE_DB_PATH=/app/data/skillsort.db
 
-# Configure default JVM options to fit in Render Free Tier (512MB RAM)
-ENV JAVA_OPTS="-Xmx350m"
+# Micro-footprint JVM parameters for 512MB RAM environments:
+# - Xmx160m: Caps Java heap space to 160MB
+# - UseSerialGC: Extremely lightweight garbage collector saving 40MB+ native RAM
+# - Xss256k: Reduces thread stack size to minimize native stack allocation
+# - MaxMetaspaceSize=80m: Limits class metadata storage
+ENV JAVA_OPTS="-Xmx160m -XX:+UseSerialGC -Xss256k -XX:MaxMetaspaceSize=80m"
 
 EXPOSE 8080
 
