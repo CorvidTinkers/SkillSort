@@ -9,7 +9,7 @@ COPY . .
 RUN chmod +x mvnw
 RUN ./mvnw clean package -DskipTests
 
-# Stage 2: Production Runtime Stage (Standard Debian/Ubuntu JRE for native library compatibility)
+# Stage 2: Production Runtime Stage
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
@@ -23,6 +23,10 @@ COPY --from=builder /app/target/Backend-0.0.1-SNAPSHOT.jar app.jar
 ENV PORT=8080
 ENV SQLITE_DB_PATH=/app/data/skillsort.db
 
+# Configure default JVM options to fit in Render Free Tier (512MB RAM)
+ENV JAVA_OPTS="-Xmx350m"
+
 EXPOSE 8080
 
-CMD ["java", "-jar", "app.jar"]
+# Execute with dynamic JVM parameters
+CMD ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
