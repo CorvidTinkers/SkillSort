@@ -2,7 +2,7 @@ import { FileUp, Inbox, FileText, Check, Plus, X, Briefcase, Sparkles, CheckCirc
 import { useRef, useState } from 'react';
 import { React } from 'react';
 interface UploadZoneProps {
-  onUpload: (file: File, hasJd: boolean, jdText: string, checklist: string[]) => void;
+  onUpload: (file: File, hasJd: boolean, jdText: string, checklist: string[], enableAts: boolean, enableKnockouts: boolean) => void;
   isProcessing?: boolean;
 }
 
@@ -45,7 +45,7 @@ export function UploadZone({ onUpload, isProcessing }: UploadZoneProps) {
   const handleProceed = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (selectedFile) {
-      onUpload(selectedFile, haveJd, jdText, mustHaves);
+      onUpload(selectedFile, haveJd, jdText, mustHaves, enableAts, showMustHaves);
     }
   };
 

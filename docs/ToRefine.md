@@ -15,3 +15,9 @@
 
 
 * **Cell-Wise SSE Streaming:** Streaming AI data cell-by-cell instead of row-by-row, which will require heavy React state management refactoring.
+
+* **Output quality issues** : current llm output is poor and ollama model is too slow
+
+* ** ATS output quality issues**: ATS measures also need to be refined 
+
+

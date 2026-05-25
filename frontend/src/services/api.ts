@@ -133,7 +133,12 @@ export const extractResumesBatch = async (
   fields: string[],
   jdText: string,
   checklist: string[],
-  onCandidateReceived: (student: StudentData) => void
+  enableAts: boolean,
+  enableKnockouts: boolean,
+  modelProvider: string,
+  modelName: string,
+  onCandidateReceived: (student: StudentData) => void,
+  onError?: (error: {type: string, message: string}) => void
 ): Promise<void> => {
   const formData = new FormData();
   formData.append('file', zipFile);
@@ -144,6 +149,10 @@ export const extractResumesBatch = async (
   if (checklist && checklist.length > 0) {
     checklist.forEach(c => formData.append('checklist', c));
   }
+  formData.append('enableAts', enableAts.toString());
+  formData.append('enableKnockouts', enableKnockouts.toString());
+  formData.append('modelProvider', modelProvider);
+  formData.append('modelName', modelName);
 
   const response = await fetch(`${BASE_URL}/api/resumes/extract`, {
     method: 'POST',
@@ -172,7 +181,18 @@ export const extractResumesBatch = async (
     buffer = chunks.pop() || '';
 
     for (const chunk of chunks) {
-      if (chunk.trim().startsWith('event:candidate') || chunk.trim().startsWith('data:')) {
+      if (chunk.trim().startsWith('event:error')) {
+        const dataMatch = chunk.match(/data:(.+)/);
+        if (dataMatch && dataMatch[1] && onError) {
+          try {
+            const errorObj = JSON.parse(dataMatch[1].trim());
+            onError(errorObj);
+          } catch(e) {
+            console.error('Failed to parse error chunk:', e);
+          }
+        }
+      } else if (chunk.trim().startsWith('event:candidate') || (chunk.trim().startsWith('data:') && !chunk.trim().includes('event:error'))) {
+        // Extract the JSON payload after 'data:'
         const dataMatch = chunk.match(/data:(.+)/);
         if (dataMatch && dataMatch[1]) {
           try {
@@ -185,7 +205,7 @@ export const extractResumesBatch = async (
               skills: result.extractedData.skills || { value: 'N/A', confidence: 'low' },
               experience: result.extractedData.experience || { value: 'N/A', confidence: 'low' },
               role: result.extractedData.role || { value: 'N/A', confidence: 'low' },
-              atsScore: result.atsScore || { value: '50%', confidence: 'low' },
+              atsScore: result.atsScore || { value: 50, confidence: 'low' },
               githubInfo: result.extractedData.githubInfo || { value: 'N/A', confidence: 'low' },
               resumeUrl: `${BASE_URL}/api/resumes/blob/${result.id}?token=${encodeURIComponent(localStorage.getItem('skillsort_token') || '')}`,
               resumeText: {

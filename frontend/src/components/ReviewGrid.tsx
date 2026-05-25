@@ -198,6 +198,16 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
         const val = info.getValue() as ExtractedField;
         const score = Number(val.value);
         
+        if (Number.isNaN(score) || val.value === null || val.value === undefined || val.value === 'NaN') {
+          return (
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 py-0.5 select-none whitespace-normal opacity-50 grayscale">
+              <span className="px-2.5 py-1 rounded-md font-mono font-bold text-xs tracking-tight border bg-slate-100 text-slate-500 border-slate-200/60">
+                NaN
+              </span>
+            </div>
+          );
+        }
+
         let pillStyles = '';
         let dotColor = '';
         let label = '';

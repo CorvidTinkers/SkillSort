@@ -3,7 +3,9 @@ package com.SkillSort.Backend.controller;
 import com.SkillSort.Backend.config.UserContext;
 import com.SkillSort.Backend.service.PdfService;
 import com.SkillSort.Backend.service.ATSService;
-import com.SkillSort.Backend.agent.ExtractionAgent;
+import com.SkillSort.Backend.agent.ResumeExtractionAgent;
+import com.SkillSort.Backend.agent.KnockoutAgent;
+import com.SkillSort.Backend.exception.AiApiException;
 import com.SkillSort.Backend.model.CandidateResult;
 import com.SkillSort.Backend.model.ExtractedField;
 import com.SkillSort.Backend.model.PdfExtractionResult;
@@ -19,6 +21,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,7 +34,10 @@ public class ResumeController {
     private PdfService pdfService;
 
     @Autowired
-    private ExtractionAgent extractionAgent;
+    private ResumeExtractionAgent extractionAgent;
+
+    @Autowired
+    private KnockoutAgent knockoutAgent;
 
     @Autowired
     private ATSService atsService;
@@ -46,7 +52,11 @@ public class ResumeController {
             @RequestPart("file") MultipartFile zipFile,
             @RequestParam("fields") List<String> fields,
             @RequestParam(value = "jobDescription", required = false) String jobDescription,
-            @RequestParam(value = "checklist", required = false) List<String> checklist) {
+            @RequestParam(value = "checklist", required = false) List<String> checklist,
+            @RequestParam(value = "enableAts", defaultValue = "false") boolean enableAts,
+            @RequestParam(value = "enableKnockouts", defaultValue = "false") boolean enableKnockouts,
+            @RequestParam(value = "modelProvider", defaultValue = "groq") String modelProvider,
+            @RequestParam(value = "modelName", defaultValue = "llama-3.3-70b-versatile") String modelName) {
         
         SseEmitter emitter = new SseEmitter(180_000L); // 3-minute timeout
         
@@ -60,49 +70,25 @@ public class ResumeController {
                 
                 // 2. Process each text through the AI Agents concurrently and stream
                 for (PdfExtractionResult entry : rawTexts) {
-                    
-                    // Task A: Asynchronous LLM Extraction (Groq)
-                    CompletableFuture<Map<String, ExtractedField>> extractionFuture = CompletableFuture.supplyAsync(
-                            () -> extractionAgent.extractFields(entry.rawText(), fields), executor);
-                            
                     // Task B: Asynchronous Local ATS Embedding Match
-                    CompletableFuture<ExtractedField> atsFuture = CompletableFuture.supplyAsync(
-                            () -> atsService.calculateMatchScore(entry.rawText(), jobDescription), executor);
-                            
-                    // Task C: Asynchronous LLM Knockout Evaluation
-                    CompletableFuture<Map<String, Boolean>> knockoutFuture = CompletableFuture.supplyAsync(
-                            () -> extractionAgent.evaluateKnockoutCriteria(entry.rawText(), checklist), executor);
-                            
-                    // Wait for all to complete
-                    CompletableFuture.allOf(extractionFuture, atsFuture, knockoutFuture).join();
-                    
-                    Map<String, ExtractedField> extractedFields = extractionFuture.get();
-                    ExtractedField atsScore = atsFuture.get();
-                    Map<String, Boolean> knockoutResults = knockoutFuture.get();
-                    
-                    Double atsScoreVal = 50.0;
-                    try {
-                        atsScoreVal = Double.parseDouble(atsScore.value().replace("%", "").trim());
-                    } catch (Exception ignored) {}
-
-                    // 3. Save directly to SQLite database partitioned under current SSO user
-                    databaseRepository.saveCandidate(entry.id(), currentUserId, entry.savedFileName(), entry.rawText(), atsScoreVal);
-                    databaseRepository.saveDocument(entry.id(), entry.pdfBytes(), entry.pdfBytes().length);
-
-                    for (Map.Entry<String, ExtractedField> fieldEntry : extractedFields.entrySet()) {
-                        databaseRepository.saveAttribute(
-                            entry.id(), 
-                            fieldEntry.getKey(), 
-                            fieldEntry.getValue().value(), 
-                            fieldEntry.getValue().confidence()
-                        );
+                    CompletableFuture<ExtractedField> atsFuture = null;
+                    if (enableAts && jobDescription != null && !jobDescription.trim().isEmpty()) {
+                        atsFuture = CompletableFuture.supplyAsync(
+                                () -> atsService.calculateMatchScore(entry.rawText(), jobDescription), executor);
                     }
+                    
+                    // Task A: Synchronous LLM Extraction (Dynamic Provider)
+                    Map<String, ExtractedField> extractedFields = extractionAgent.extractFields(entry.rawText(), fields, modelProvider, modelName);
+                            
 
-                    for (Map.Entry<String, Boolean> koEntry : knockoutResults.entrySet()) {
-                        databaseRepository.saveKnockout(entry.id(), koEntry.getKey(), koEntry.getValue());
+                    // Task C: Synchronous LLM Knockout Evaluation (Dynamic Provider)
+                    Map<String, Boolean> knockoutResults = new HashMap<>();
+                    if (enableKnockouts && checklist != null && !checklist.isEmpty()) {
+                        knockoutResults = knockoutAgent.evaluateKnockoutCriteria(entry.rawText(), checklist, modelProvider, modelName);
                     }
-
-                    // 4. Stream response to frontend
+                    
+                    // Wait for the local ATS score to finish before sending the response
+                    ExtractedField atsScore = atsFuture != null ? atsFuture.get() : null;
                     emitter.send(SseEmitter.event()
                         .name("candidate")
                         .data(new CandidateResult(
@@ -117,7 +103,27 @@ public class ResumeController {
                 emitter.complete();
             } catch (Exception e) {
                 e.printStackTrace();
-                emitter.completeWithError(e);
+                
+                try {
+                    String errorType = "ERROR";
+                    String message = e.getMessage() != null ? e.getMessage().replace("\"", "\\\"") : "Unknown Error";
+                    
+                    if (e instanceof AiApiException) {
+                        errorType = ((AiApiException) e).getCode();
+                        message = e.getMessage().replace("\"", "\\\"");
+                    } else if (e.getCause() instanceof AiApiException) {
+                        errorType = ((AiApiException) e.getCause()).getCode();
+                        message = e.getCause().getMessage().replace("\"", "\\\"");
+                    }
+                    
+                    emitter.send(SseEmitter.event()
+                        .name("error")
+                        .data("{\"type\": \"" + errorType + "\", \"message\": \"" + message + "\"}"));
+                    emitter.complete(); // Gracefully close so frontend can process the error chunk
+                } catch (Exception ex) {
+                    // Fallback if unable to send error event
+                    emitter.completeWithError(e);
+                }
             }
         });
         

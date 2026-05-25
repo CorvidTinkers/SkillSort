@@ -3,10 +3,12 @@ import { UploadZone } from './components/UploadZone';
 import { ReviewGrid } from './components/ReviewGrid';
 import { ResumeViewer } from './components/ResumeViewer';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
+import { ErrorModal } from './components/ErrorModal';
+import { ModelSelectionModal } from './components/ModelSelectionModal';
 import { Login } from './components/Login';
-import { extractResumesBatch, fetchSavedCandidates } from './services/api';
+import { extractResumesBatch } from './services/api';
 import { StudentData, User } from './types';
-import { Briefcase, ChevronLeft, LogOut } from 'lucide-react';
+import { Briefcase, LayoutGrid, BarChart3, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -18,6 +20,12 @@ export default function App() {
   const [hasJobDescription, setHasJobDescription] = useState(false);
   const [checklistItems, setChecklistItems] = useState<string[]>([]);
   const [view, setView] = useState<'grid' | 'dashboard'>('grid');
+  
+  const [errorModal, setErrorModal] = useState<{isOpen: boolean, type: string, message: string}>({
+    isOpen: false,
+    type: '',
+    message: ''
+  });
 
   const [resumeWidth, setResumeWidth] = useState(40);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -25,70 +33,32 @@ export default function App() {
   const [isDragging, setIsDragging] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Model Selection State
+  const [modelProvider, setModelProvider] = useState('groq');
+  const [modelName, setModelName] = useState('llama-3.3-70b-versatile');
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [isModelModalOpen, setIsModelModalOpen] = useState(false);
+
+  // Load persisted model settings
   useEffect(() => {
-    const token = localStorage.getItem('skillsort_token');
-    if (token) {
-      try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const payload = JSON.parse(window.atob(base64));
-        const loggedInUser: User = {
-          id: payload.sub,
-          email: payload.email,
-          name: payload.name,
-          ssoProvider: payload.sso_provider,
-          avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(payload.name)}`
-        };
-        setUser(loggedInUser);
-        
-        setIsProcessing(true);
-        fetchSavedCandidates()
-          .then(data => {
-            setStudents(data);
-            setHasUploaded(data.length > 0);
-            if (data.length > 0) {
-              setActiveStudentId(data[0].id);
-              setActiveField('domain');
-            }
-          })
-          .catch(err => {
-            console.error('Failed to load saved candidates', err);
-          })
-          .finally(() => {
-            setIsProcessing(false);
-          });
-      } catch (e) {
-        localStorage.removeItem('skillsort_token');
+    const savedProvider = localStorage.getItem('currentModelProvider');
+    const savedModel = localStorage.getItem('currentModelName');
+    if (savedProvider) setModelProvider(savedProvider);
+    if (savedModel) setModelName(savedModel);
+    
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setIsProfileDropdownOpen(false);
       }
-    }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLoginSuccess = async (loggedInUser: User) => {
-    setUser(loggedInUser);
-    setIsProcessing(true);
-    try {
-      const data = await fetchSavedCandidates();
-      setStudents(data);
-      setHasUploaded(data.length > 0);
-      if (data.length > 0) {
-        setActiveStudentId(data[0].id);
-        setActiveField('domain');
-      }
-    } catch (err) {
-      console.error('Failed to load saved candidates on login', err);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('skillsort_token');
-    setUser(null);
-    setStudents([]);
-    setHasUploaded(false);
-    setActiveStudentId(null);
-    setActiveField(null);
+  const handleLoginSuccess = (loggedUser: User) => {
+    setUser(loggedUser);
   };
 
   const handleToggleMaximize = () => {
@@ -131,7 +101,7 @@ export default function App() {
     document.addEventListener('mouseup', handleMouseUp);
   };
 
-  const handleUpload = async (file: File, hasJd: boolean, jdText: string, checklist: string[]) => {
+  const handleUpload = async (file: File, hasJd: boolean, jdText: string, checklist: string[], enableAts: boolean, enableKnockouts: boolean) => {
     setIsProcessing(true);
     setHasUploaded(true);
     setHasJobDescription(hasJd);
@@ -142,7 +112,7 @@ export default function App() {
       const targetFields = ['name', 'domain', 'skills', 'experience', 'role', 'githubInfo'];
       let isFirst = true;
       
-      await extractResumesBatch(file, targetFields, jdText, checklist, (student) => {
+      await extractResumesBatch(file, targetFields, jdText, checklist, enableAts, enableKnockouts, modelProvider, modelName, (student) => {
         setStudents(prev => [...prev, student]);
         
         if (isFirst) {
@@ -150,11 +120,21 @@ export default function App() {
           setActiveField('domain');
           isFirst = false;
         }
+      }, (error) => {
+        setErrorModal({
+          isOpen: true,
+          type: error.type,
+          message: error.message
+        });
       });
       
     } catch (err) {
       console.error('Upload failed', err);
-      alert('Failed to process the batch. Please check console for details.');
+      setErrorModal({
+        isOpen: true,
+        type: 'UNKNOWN_ERROR',
+        message: 'Failed to process the batch. Please check console for details.'
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -171,7 +151,8 @@ export default function App() {
 
   return (
     <div className="h-screen w-full flex flex-col bg-surface-container-low overflow-hidden font-sans">
-      <header className="h-16 bg-surface-container-lowest border-b border-slate-200 shrink-0 flex items-center px-6 justify-between select-none shadow-sm z-20">
+      {/* Global Header */}
+      <header className="h-16 bg-surface-container-lowest border-b border-slate-200 shrink-0 flex items-center px-6 justify-between select-none shadow-sm">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 bg-primary/10 text-primary rounded flex items-center justify-center shadow-sm">
@@ -205,26 +186,36 @@ export default function App() {
           )}
         </div>
 
-        <div className="flex items-center gap-4 text-sm font-semibold text-slate-600">
-          <button className="hover:text-primary transition-colors cursor-pointer mr-2">Documentation</button>
+        <div className="flex items-center gap-4 text-sm font-semibold text-slate-600 relative">
+          <button className="hover:text-primary transition-colors cursor-pointer">Documentation</button>
           
-          <div className="flex items-center gap-3 pl-4 border-l border-slate-200 select-none">
-            <img 
-              src={user.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name)}`} 
-              alt={user.name} 
-              className="h-8 w-8 rounded-full border border-slate-200 object-cover shadow-sm"
-            />
-            <div className="flex flex-col text-left">
-              <span className="text-xs font-bold text-slate-800 leading-none">{user.name}</span>
-              <span className="text-[9px] font-normal text-slate-400 leading-tight uppercase tracking-wider">{user.ssoProvider} Workspace</span>
-            </div>
-            <button 
-              onClick={handleLogout}
-              title="Logout from SkillSort"
-              className="h-8 w-8 text-slate-400 hover:text-red-500 bg-slate-100 hover:bg-red-50 rounded-lg flex items-center justify-center border border-slate-200/60 hover:border-red-200 transition-all duration-200 cursor-pointer shadow-sm"
+          <div className="relative" ref={profileDropdownRef}>
+            <div 
+              onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+              className="h-8 w-8 rounded-full bg-primary-container text-on-primary-container border border-primary/20 flex items-center justify-center font-bold text-xs select-none cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
             >
-              <LogOut size={14} />
-            </button>
+              {user?.name?.charAt(0).toUpperCase() || 'PO'}
+            </div>
+
+            {/* Profile Dropdown */}
+            {isProfileDropdownOpen && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 py-2 animate-in slide-in-from-top-2 fade-in duration-200">
+                <div className="px-4 py-2 border-b border-slate-100 mb-2">
+                  <p className="text-sm font-semibold text-slate-800 truncate">{user?.name}</p>
+                  <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    setIsProfileDropdownOpen(false);
+                    setIsModelModalOpen(true);
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 text-sm text-slate-700 transition-colors"
+                >
+                  <Settings size={16} className="text-slate-400" />
+                  Model Selection
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -299,6 +290,24 @@ export default function App() {
           </div>
         )}
       </main>
+      
+      <ErrorModal 
+        isOpen={errorModal.isOpen} 
+        onClose={() => setErrorModal(prev => ({ ...prev, isOpen: false }))}
+        errorType={errorModal.type}
+        errorMessage={errorModal.message}
+      />
+      
+      <ModelSelectionModal 
+        isOpen={isModelModalOpen}
+        onClose={() => setIsModelModalOpen(false)}
+        currentProvider={modelProvider}
+        currentModel={modelName}
+        onSave={(provider, model) => {
+          setModelProvider(provider);
+          setModelName(model);
+        }}
+      />
     </div>
   );
 }
