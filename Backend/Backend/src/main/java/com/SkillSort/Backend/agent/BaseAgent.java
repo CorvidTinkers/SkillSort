@@ -113,7 +113,7 @@ public abstract class BaseAgent {
             
             finalResult.putAll(parseResult.successfulFields);
             currentMissingFields = parseResult.failedFields;
-            System.out.println("attempt ending time: " + System.currentTimeMillis()+" time difference: " + (System.currentTimeMillis()-startingtime));     
+            System.out.println("attempt end time difference: " + (System.currentTimeMillis()-startingtime));     
             attempt++;
         }
         
