@@ -13,8 +13,9 @@ interface AnalyticsDashboardProps {
 
 export function AnalyticsDashboard({ students = MOCK_STUDENTS }: AnalyticsDashboardProps) {
   const stats = useMemo(() => {
-    const total = students.length;
-    const avgScore = total > 0 ? students.reduce((acc, s) => acc + (s.atsScore.value as number), 0) / total : 0;
+    const scoredStudents = students.filter(s => !Number.isNaN(s.atsScore.value));
+    const totalScored = scoredStudents.length;
+    const avgScore = totalScored > 0 ? scoredStudents.reduce((acc, s) => acc + s.atsScore.value, 0) / totalScored : 0;
     
     // Domain distribution
     const domains = students.reduce((acc, s) => {
@@ -32,16 +33,16 @@ export function AnalyticsDashboard({ students = MOCK_STUDENTS }: AnalyticsDashbo
     const confidenceData = Object.keys(confidences).map(name => ({ name, value: confidences[name] }));
 
     // Role Score distribution
-    const roleStats = students.reduce((acc, s) => {
+    const roleStats = scoredStudents.reduce((acc, s) => {
       const r = s.role.value as string;
       if (!acc[r]) acc[r] = { name: r, avgScore: 0, count: 0 };
-      acc[r].avgScore += s.atsScore.value as number;
+      acc[r].avgScore += s.atsScore.value;
       acc[r].count += 1;
       return acc;
     }, {} as Record<string, { name: string, avgScore: number, count: number }>);
     const roleData = Object.values(roleStats).map(r => ({ ...r, avgScore: Math.round(r.avgScore / r.count) })).sort((a,b) => b.avgScore - a.avgScore).slice(0, 5);
 
-    return { total, avgScore: Math.round(avgScore), domainData, confidenceData, roleData };
+    return { total: students.length, avgScore: Math.round(avgScore), domainData, confidenceData, roleData };
   }, [students]);
 
   const COLORS = ['#0f766e', '#14b8a6', '#5eead4', '#ccfbf1', '#042f2e'];

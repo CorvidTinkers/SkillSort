@@ -1,6 +1,7 @@
+import React, { useState, useEffect } from 'react';
 import { StudentData } from '../types';
 import { MOCK_STUDENTS } from '../data';
-import { ChevronRight, Maximize2, Minimize2, ZoomIn } from 'lucide-react';
+import { ChevronRight, Maximize2, Minimize2, ZoomIn, FileQuestion } from 'lucide-react';
 
 interface ResumeViewerProps {
   studentId: string | null;
@@ -42,6 +43,38 @@ export function ResumeViewer({
 
   const student = students.find(s => s.id === studentId);
   
+  const [pdfState, setPdfState] = useState<{ url: string | null, error: boolean, loading: boolean }>({ 
+    url: null, error: false, loading: true 
+  });
+
+  useEffect(() => {
+    if (!student) return;
+    
+    setPdfState({ url: null, error: false, loading: true });
+    let objectUrl: string | null = null;
+    let isMounted = true;
+
+    fetch(student.resumeUrl)
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Failed');
+        const blob = await res.blob();
+        if (blob.type !== 'application/pdf') throw new Error('Not a PDF');
+        
+        objectUrl = URL.createObjectURL(blob);
+        if (isMounted) setPdfState({ url: objectUrl, error: false, loading: false });
+      })
+      .catch(() => {
+        if (isMounted) setPdfState({ url: null, error: true, loading: false });
+      });
+
+    return () => {
+      isMounted = false;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [student?.resumeUrl]);
+
   if (!student) return null;
 
   // Function to apply highlighting if the section matches the active field
@@ -93,14 +126,31 @@ export function ResumeViewer({
       </div>
 
       {/* Document Canvas */}
-      <div className="flex-1 overflow-hidden p-0 m-0 bg-slate-50 relative">
-        <iframe 
-          src={student.resumeUrl} 
-          className="w-full h-full border-none"
-          title="Resume PDF"
-        />
+      <div className="flex-1 overflow-hidden p-0 m-0 bg-slate-50 relative flex items-center justify-center">
+        {pdfState.loading && (
+           <div className="text-slate-400 flex flex-col items-center gap-3">
+             <div className="w-8 h-8 border-4 border-slate-200 border-t-teal-500 rounded-full animate-spin" />
+             <span className="text-sm font-medium tracking-wide">Loading document...</span>
+           </div>
+        )}
         
-        {/* Optional overlay for highlighting (Since iframe is cross-origin or local, we can't easily inject highlights inside it without a PDF.js wrapper, but for now we just show the native PDF) */}
+        {pdfState.error && !pdfState.loading && (
+           <div className="flex flex-col items-center justify-center text-slate-400 gap-4 p-8 text-center animate-in fade-in duration-500">
+             <div className="text-7xl mb-2 opacity-40 select-none grayscale">🦖</div>
+             <h3 className="text-lg font-semibold text-slate-500">Oops! We had trouble opening this resume.</h3>
+             <p className="text-sm max-w-sm leading-relaxed">
+               The document might be corrupted, deleted from the server, or you might not have the correct permissions to view it.
+             </p>
+           </div>
+        )}
+
+        {pdfState.url && !pdfState.loading && (
+          <iframe 
+            src={pdfState.url} 
+            className="w-full h-full border-none"
+            title="Resume PDF"
+          />
+        )}
       </div>
     </div>
   );

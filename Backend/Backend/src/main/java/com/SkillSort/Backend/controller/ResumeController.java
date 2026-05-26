@@ -139,7 +139,7 @@ public class ResumeController {
         return ResponseEntity.ok(databaseRepository.getCandidatesByUser(currentUserId));
     }
 
-    @GetMapping(value = "/blob/{id}", produces = MediaType.APPLICATION_PDF_VALUE)
+    @GetMapping(value = "/blob/{id}")
     public ResponseEntity<?> getPdfBlob(@PathVariable("id") String id) {
         String currentUserId = UserContext.getCurrentUser();
         if (currentUserId == null) {

@@ -195,10 +195,10 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
       header: 'ATS Matching',
       size: 140,
       cell: info => {
-        const val = info.getValue() as ExtractedField;
-        const score = Number(val.value);
+        const val = info.getValue() as { value: number; confidence: Confidence };
+        const score = val.value;
         
-        if (Number.isNaN(score) || val.value === null || val.value === undefined || val.value === 'NaN') {
+        if (Number.isNaN(score)) {
           return (
             <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 py-0.5 select-none whitespace-normal opacity-50 grayscale">
               <span className="px-2.5 py-1 rounded-md font-mono font-bold text-xs tracking-tight border bg-slate-100 text-slate-500 border-slate-200/60">
@@ -242,7 +242,14 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
           </div>
         );
       },
-      sortingFn: (a, b) => ((a.original.atsScore.value as number) - (b.original.atsScore.value as number)),
+      sortingFn: (a, b) => {
+        const valA = a.original.atsScore.value;
+        const valB = b.original.atsScore.value;
+        if (Number.isNaN(valA) && Number.isNaN(valB)) return 0;
+        if (Number.isNaN(valA)) return -1;
+        if (Number.isNaN(valB)) return 1;
+        return valA - valB;
+      },
     },
     {
       id: 'githubInfo',
@@ -414,7 +421,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
   };
 
   const eligibleCandidates = useMemo(() => {
-    return students.filter(s => (s.atsScore.value as number) >= exportThreshold);
+    return students.filter(s => !Number.isNaN(s.atsScore.value) && s.atsScore.value >= exportThreshold);
   }, [students, exportThreshold]);
 
   // Real browser CSV compiler & downloader!
@@ -427,8 +434,8 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
         s.domain.value,
         s.skills.value,
         s.experience.value,
-        s.role.value,
-        `${s.atsScore.value}%`
+        s.role?.value ?? '',
+        Number.isNaN(s.atsScore.value) ? 'NaN' : `${s.atsScore.value}%`
       ]);
 
       const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");

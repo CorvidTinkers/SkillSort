@@ -12,7 +12,7 @@ export interface StudentData {
   skills: ExtractedField;
   experience: ExtractedField;
   role: ExtractedField;
-  atsScore: ExtractedField;
+  atsScore: { value: number; confidence: Confidence };
   githubInfo: ExtractedField;
   resumeUrl: string;
   resumeText: {

@@ -25,44 +25,47 @@ public class ChatModelFactory {
     private String ollamaUrl;
 
     public ChatClient createChatClient(String provider, String modelName) {
-        if ("ollama".equalsIgnoreCase(provider)) {
-            org.springframework.http.client.SimpleClientHttpRequestFactory requestFactory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
-            
-            RestClient.Builder customRestClientBuilder = RestClient.builder().requestFactory(requestFactory);
+        System.out.println("model:"+modelName+" provider:"+provider);
+        try{
+                if ("ollama".equalsIgnoreCase(provider)) {
+                org.springframework.http.client.SimpleClientHttpRequestFactory requestFactory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+                
+                RestClient.Builder customRestClientBuilder = RestClient.builder().requestFactory(requestFactory);
 
-            OllamaApi ollamaApi = OllamaApi.builder()
-                    .baseUrl(ollamaUrl)
-                    .restClientBuilder(customRestClientBuilder)
-                    .build();
-            
-            OllamaChatOptions options = OllamaChatOptions.builder()
-                    .model(modelName)
-                    .format("json")
-                    .build();
-                    
-            OllamaChatModel chatModel = OllamaChatModel.builder()
-                    .ollamaApi(ollamaApi)
-                    .defaultOptions(options)
-                    .build();
-            return ChatClient.builder(chatModel).build();
-        } else {
-            // Default to Groq using modern Spring AI Builders
-            OpenAIClient openAiClient = OpenAIOkHttpClient.builder()
-                    .baseUrl(groqApiUrl)
-                    .apiKey(groqApiKey)
-                    .build();
+                OllamaApi ollamaApi = OllamaApi.builder()
+                        .baseUrl(ollamaUrl)
+                        .restClientBuilder(customRestClientBuilder)
+                        .build();
+                
+                OllamaChatOptions options = OllamaChatOptions.builder()
+                        .model(modelName)
+                        .format("json")
+                        .build();
+                        
+                OllamaChatModel chatModel = OllamaChatModel.builder()
+                        .ollamaApi(ollamaApi)
+                        .defaultOptions(options)
+                        .build();
+                return ChatClient.builder(chatModel).build();
+                } else {
+                // 1. Pack your credentials and Groq route directly into the chat options
+                OpenAiChatOptions options = OpenAiChatOptions.builder()
+                .model(modelName)
+                .baseUrl(groqApiUrl)  // Passed safely directly into the native SDK layer
+                .apiKey(groqApiKey)   // Resolves the credential source exception
+                .build();
 
-            OpenAiChatOptions options = OpenAiChatOptions.builder()
-                    .model(modelName)
-                    .build();
+                // 2. Build the model directly using those options
+                OpenAiChatModel chatModel = OpenAiChatModel.builder()
+                .options(options)     // Automatically triggers OpenAiSetup configurations internally
+                .build();
 
-            // Uses the official builder to avoid manual infrastructure wiring
-            OpenAiChatModel chatModel = OpenAiChatModel.builder()
-                    .openAiClient(openAiClient)
-                    .options(options)
-                    .build();
-
-            return ChatClient.builder(chatModel).build();
+                // 3. Complete your builder flow
+                return ChatClient.builder(chatModel).build();
+                }
+        }catch(Exception e){
+            e.printStackTrace();
+            return null;
         }
     }
 }

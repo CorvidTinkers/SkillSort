@@ -97,7 +97,8 @@ public abstract class BaseAgent {
         Map<String, T> finalResult = new HashMap<>();
 
         while (attempt < maxAttempts && !currentMissingFields.isEmpty()) {
-            System.out.println("Attempt: " + attempt+ "for resume starting like: " + userPrompt.substring(0, Math.min(userPrompt.length(), 10)));
+            System.out.println("Attempt: " + attempt+ "for resume starting like: " + userPrompt.substring(0, Math.min(userPrompt.length(),44))+"starting time: " + System.currentTimeMillis());
+            long startingtime = System.currentTimeMillis();
             String fieldsStr = String.join(", ", currentMissingFields);
             String retryInstruction = attempt > 0 
                 ? "\n\nCRITICAL: You forgot these fields. You must generate ONLY these missing fields now: " + fieldsStr 
@@ -107,18 +108,19 @@ public abstract class BaseAgent {
 
             String rawJson = executePromptForString(finalSystemPrompt, userPrompt, provider, modelName);
 
+            System.out.println("result time:" + System.currentTimeMillis()+ " time differnece: " + (System.currentTimeMillis()-startingtime));
             ParseResult<T> parseResult = parseJsonResponse(rawJson, currentMissingFields, fieldMapper);
             
             finalResult.putAll(parseResult.successfulFields);
             currentMissingFields = parseResult.failedFields;
-            
+            System.out.println("attempt ending time: " + System.currentTimeMillis()+" time difference: " + (System.currentTimeMillis()-startingtime));     
             attempt++;
         }
         
         for (String field : expectedFields) {
             finalResult.putIfAbsent(field, defaultValue);
         }
-        
+        System.out.println("ending time: " + System.currentTimeMillis());
         return finalResult;
     }
 

@@ -112,7 +112,7 @@ export const fetchSavedCandidates = async (): Promise<StudentData[]> => {
       skills: extractedData.skills || { value: 'N/A', confidence: 'low' },
       experience: extractedData.experience || { value: 'N/A', confidence: 'low' },
       role: extractedData.role || { value: 'N/A', confidence: 'low' },
-      atsScore: { value: result.ats_score !== undefined ? `${Math.round(result.ats_score)}%` : '50%', confidence: 'high' },
+      atsScore: (result.ats_score !== undefined && result.ats_score !== null) ? { value: Math.round(result.ats_score), confidence: 'high' } : { value: NaN, confidence: 'low' },
       githubInfo: extractedData.githubInfo || { value: 'N/A', confidence: 'low' },
       resumeUrl: `${BASE_URL}/api/resumes/blob/${result.id}?token=${encodeURIComponent(localStorage.getItem('skillsort_token') || '')}`,
       resumeText: {
@@ -205,7 +205,7 @@ export const extractResumesBatch = async (
               skills: result.extractedData.skills || { value: 'N/A', confidence: 'low' },
               experience: result.extractedData.experience || { value: 'N/A', confidence: 'low' },
               role: result.extractedData.role || { value: 'N/A', confidence: 'low' },
-              atsScore: result.atsScore || { value: 50, confidence: 'low' },
+              atsScore: (result.atsScore !== undefined && result.atsScore !== null) ? { value: Number(result.atsScore.value), confidence: result.atsScore.confidence } : { value: NaN, confidence: 'low' },
               githubInfo: result.extractedData.githubInfo || { value: 'N/A', confidence: 'low' },
               resumeUrl: `${BASE_URL}/api/resumes/blob/${result.id}?token=${encodeURIComponent(localStorage.getItem('skillsort_token') || '')}`,
               resumeText: {
