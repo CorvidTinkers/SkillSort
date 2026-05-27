@@ -70,6 +70,11 @@ public class ResumeController {
                 
                 // 2. Process each text through the AI Agents concurrently and stream
                 for (PdfExtractionResult entry : rawTexts) {
+                    // Pre-emptively save the candidate and PDF blob to the database
+                    // so the UI can immediately fetch the PDF when the event is received.
+                    databaseRepository.saveCandidate(entry.id(), currentUserId, entry.savedFileName(), entry.rawText(), null);
+                    databaseRepository.saveDocument(entry.id(), entry.pdfBytes(), entry.pdfBytes().length);
+                    
                     // Task B: Asynchronous Local ATS Embedding Match
                     CompletableFuture<ExtractedField> atsFuture = null;
                     if (enableAts && jobDescription != null && !jobDescription.trim().isEmpty()) {
@@ -89,6 +94,17 @@ public class ResumeController {
                     
                     // Wait for the local ATS score to finish before sending the response
                     ExtractedField atsScore = atsFuture != null ? atsFuture.get() : null;
+                    
+                    // Update ATS score in the database if available
+                    if (atsScore != null && atsScore.value() != null) {
+                        try {
+                            double parsedScore = Double.parseDouble(atsScore.value());
+                            // The frontend needs ATS score to be persisted for the /list endpoint
+                            databaseRepository.updateCandidateAtsScore(entry.id(), parsedScore);
+                        } catch (NumberFormatException e) {
+                            System.err.println("Failed to parse ATS score: " + atsScore.value());
+                        }
+                    }
                     emitter.send(SseEmitter.event()
                         .name("candidate")
                         .data(new CandidateResult(

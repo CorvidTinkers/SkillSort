@@ -2,21 +2,16 @@ package com.SkillSort.Backend.agent;
 
 import com.SkillSort.Backend.model.ExtractedField;
 import com.SkillSort.Backend.config.ChatModelFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
+import dev.langchain4j.service.SystemMessage;
+import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.V;
 import org.springframework.stereotype.Component;
 
-import org.springframework.ai.chat.prompt.PromptTemplate;
-
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Component
 public class ResumeExtractionAgent extends BaseAgent {
-
-    @Value("classpath:prompts/extraction-system-prompt.txt")
-    private Resource systemPromptResource;
 
     public ResumeExtractionAgent(ChatModelFactory chatModelFactory) {
         super(chatModelFactory);
@@ -24,43 +19,32 @@ public class ResumeExtractionAgent extends BaseAgent {
 
     @Override
     protected String getUserPrompt(Object... params) {
-        String rawPdfText = (String) params[0];
-        return "Resume raw layout data:\n\n" + rawPdfText;
+        return ""; // Not used anymore
+    }
+
+    interface ResumeExtractorService {
+        @SystemMessage("""
+            You are an expert ATS data extraction worker engine. Your task is to process unstructured resume text and convert it into structured data.
+            You must extract information ONLY for the specific keys requested.
+            
+            CRITICAL RULES:
+            1. Your output MUST be a JSON object where each requested key maps to a nested object containing exactly two fields: "value" (the extracted string) and "confidence" ("low", "medium", or "high").
+            2. If a field cannot be determined from the text, assign its "value" as "Not Provided" and "confidence" as "low". Do not guess or return a simple string.
+            3. DO NOT include any conversational introduction, preamble, explanation, notes, markdown formatting, or backticks in your response. The response must contain ONLY the raw JSON object and nothing else.
+            """)
+        @UserMessage("Resume raw layout data:\n\n{{text}}\n\nPlease extract the following fields and return as JSON: {{fields}}")
+        Map<String, ExtractedField> extract(@V("text") String text, @V("fields") List<String> fields);
     }
 
     public Map<String, ExtractedField> extractFields(String rawPdfText, List<String> fieldsToExtract, String provider, String modelName) {
-        String userPromptText = getUserPrompt(rawPdfText);
-        
-        PromptTemplate template = new PromptTemplate(systemPromptResource);
-        String baseSystemPrompt = template.render(new HashMap<>());
-        
-        return executeExtraction(
-            baseSystemPrompt,
-            userPromptText,
-            fieldsToExtract,
-            fieldNode -> {
-                if (fieldNode.isObject() && fieldNode.has("value")) {
-                    String val = fieldNode.get("value").asText();
-                    String conf = fieldNode.has("confidence") ? fieldNode.get("confidence").asText() : "medium";
-                    return new ExtractedField(val, conf);
-                } else if (fieldNode.isArray()) {
-                    StringBuilder combinedVal = new StringBuilder();
-                    for (org.springframework.ai.chat.prompt.PromptTemplate _ignore : new org.springframework.ai.chat.prompt.PromptTemplate[0]){} // ignore just for import warning
-                    for (com.fasterxml.jackson.databind.JsonNode arrayItem : fieldNode) {
-                        if (arrayItem.isObject() && arrayItem.has("value")) {
-                            if (combinedVal.length() > 0) combinedVal.append(" | ");
-                            combinedVal.append(arrayItem.get("value").asText());
-                        }
-                    }
-                    if (combinedVal.length() > 0) {
-                        return new ExtractedField(combinedVal.toString(), "medium");
-                    }
-                }
-                return null;
-            },
-            new ExtractedField("Not Provided", "low"),
-            provider,
-            modelName
+        return super.extractFields(
+                ResumeExtractorService.class,
+                provider,
+                modelName,
+                service -> service.extract(rawPdfText, fieldsToExtract),
+                ExtractedField.class,
+                fieldsToExtract,
+                new ExtractedField("Not Provided", "low")
         );
     }
 }

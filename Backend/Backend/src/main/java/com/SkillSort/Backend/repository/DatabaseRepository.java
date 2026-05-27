@@ -66,6 +66,12 @@ public class DatabaseRepository {
         jdbcTemplate.update(sql, id, uploadedBy, filename, extractedText, atsScore);
     }
 
+    // Update Candidate ATS Score
+    public void updateCandidateAtsScore(String id, Double atsScore) {
+        String sql = "UPDATE candidates SET ats_score = ? WHERE id = ?";
+        jdbcTemplate.update(sql, atsScore, id);
+    }
+
     // Save Attribute
     public void saveAttribute(String candidateId, String key, String value, String confidence) {
         String sql = "INSERT OR REPLACE INTO candidate_attributes (candidate_id, attribute_key, attribute_value, confidence) VALUES (?, ?, ?, ?)";

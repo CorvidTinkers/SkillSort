@@ -1,6 +1,9 @@
 package com.SkillSort.Backend.agent;
 
 import com.SkillSort.Backend.config.ChatModelFactory;
+import dev.langchain4j.service.SystemMessage;
+import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.V;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -16,18 +19,18 @@ public class KnockoutAgent extends BaseAgent {
 
     @Override
     protected String getUserPrompt(Object... params) {
-        String rawPdfText = (String) params[0];
-        return "Resume raw data:\n\n" + rawPdfText;
+        return ""; // Not used anymore
     }
 
-    protected String getSystemPrompt(Object... params) {
-        @SuppressWarnings("unchecked")
-        List<String> checklist = (List<String>) params[0];
-        return "You are a strict HR ATS Knockout evaluator. " +
-            "Evaluate if the resume meets each of the following mandatory criteria: " + 
-            String.join(", ", checklist) + ". " +
-            "Return a strict JSON object mapping the exact criteria string to a boolean (true if met, false if unmet). " +
-            "Do not return anything else except the JSON.";
+    interface KnockoutExtractorService {
+        @SystemMessage("""
+            You are a strict HR ATS Knockout evaluator.
+            Evaluate if the resume meets each of the mandatory criteria requested.
+            Return a JSON object mapping the exact criteria string to a boolean (true if met, false if unmet).
+            Do not return anything else except the JSON.
+            """)
+        @UserMessage("Resume raw data:\n\n{{text}}\n\nPlease evaluate these criteria and return as JSON: {{checklist}}")
+        Map<String, Boolean> evaluate(@V("text") String text, @V("checklist") List<String> checklist);
     }
 
     public Map<String, Boolean> evaluateKnockoutCriteria(String rawPdfText, List<String> checklist, String provider, String modelName) {
@@ -35,24 +38,14 @@ public class KnockoutAgent extends BaseAgent {
             return new HashMap<>();
         }
         
-        String userPrompt = getUserPrompt(rawPdfText);
-        String systemPrompt = getSystemPrompt(checklist);
-            
-        return executeExtraction(
-            systemPrompt,
-            userPrompt,
-            checklist,
-            fieldNode -> {
-                if (fieldNode.isBoolean()) {
-                    return fieldNode.asBoolean();
-                } else if (fieldNode.isTextual()) {
-                    return Boolean.parseBoolean(fieldNode.asText());
-                }
-                return null;
-            },
-            false,
-            provider,
-            modelName
+        return super.extractFields(
+                KnockoutExtractorService.class,
+                provider,
+                modelName,
+                service -> service.evaluate(rawPdfText, checklist),
+                Boolean.class,
+                checklist,
+                false
         );
     }
 }
