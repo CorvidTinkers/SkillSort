@@ -24,6 +24,8 @@ export interface StudentData {
     education: string;
   };
   knockoutResults: Record<string, boolean>;
+  hasError?: boolean;
+  errorMessage?: string;
 }
 
 export interface User {

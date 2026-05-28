@@ -239,6 +239,7 @@ export default function App() {
                 activeField={activeField}
                 hasJobDescription={hasJobDescription}
                 checklistItems={checklistItems}
+                isExtracting={isProcessing}
               />
             </div>
             

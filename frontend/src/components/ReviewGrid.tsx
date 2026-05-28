@@ -36,6 +36,7 @@ interface ReviewGridProps {
   activeField: keyof StudentData | null;
   hasJobDescription?: boolean;
   checklistItems?: string[];
+  isExtracting?: boolean;
 }
 
 // Color-code helper to map confidence levels to soft, palatable pastel themes
@@ -106,7 +107,7 @@ const SortableHeader = ({ header, children }: any) => {
   );
 };
 
-export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStudentId, activeField, hasJobDescription = false, checklistItems = [] }: ReviewGridProps) {
+export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStudentId, activeField, hasJobDescription = false, checklistItems = [], isExtracting = false }: ReviewGridProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [columnPinning, setColumnPinning] = useState({
@@ -468,7 +469,15 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
       )}
 
       {/* Grid Toolbar */}
-      <div className="h-14 border-b border-slate-200 flex items-center px-6 shrink-0 bg-white relative">
+      <div className="h-14 border-b border-slate-200 flex items-center px-6 shrink-0 bg-white relative overflow-hidden">
+        
+        {/* Active Connection Indeterminate Loading Bar */}
+        {isExtracting && (
+          <div className="absolute top-0 left-0 w-full h-1 bg-slate-100 overflow-hidden">
+            <div className="h-full bg-primary/80 w-1/3 animate-[pulse_1.5s_infinite_linear] rounded-r-full" />
+          </div>
+        )}
+
         <div className="flex items-center gap-3">
           <Layers className="h-5 w-5 text-primary" />
           <h2 className="font-semibold text-slate-800">Review Extraction ({students.length} Records)</h2>
@@ -692,7 +701,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
             </thead>
             <tbody>
               {table.getRowModel().rows.map(row => (
-                <tr key={row.id} className="group border-b border-slate-200 hover:bg-slate-50/50">
+                <tr key={row.id} className={`group border-b border-slate-200 ${row.original.hasError ? 'bg-rose-50/50 hover:bg-rose-100/50' : 'hover:bg-slate-50/50'}`}>
                   {row.getVisibleCells().map(cell => {
                     const isPinned = cell.column.getIsPinned();
                     return (
@@ -703,9 +712,18 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
                           left: isPinned ? 0 : undefined,
                           width: cell.column.getSize(),
                         }}
-                        className={`${isPinned ? 'sticky z-20 bg-slate-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]' : ''} ${getCellClass(row.original.id, cell.column.id as keyof StudentData, !!isPinned)}`}
+                        className={`${isPinned ? 'sticky z-20 bg-slate-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]' : ''} ${getCellClass(row.original.id, cell.column.id as keyof StudentData, !!isPinned)} ${row.original.hasError ? '!bg-rose-50/30' : ''}`}
                       >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        {row.original.hasError && cell.column.id === 'name' ? (
+                          <div className="flex items-center gap-2">
+                            <AlertCircle size={14} className="text-rose-500" />
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </div>
+                        ) : row.original.hasError && cell.column.id === 'domain' ? (
+                          <span className="text-xs font-bold text-rose-600 bg-rose-100 px-2 py-1 rounded">EXTRACTION FAILED</span>
+                        ) : (
+                          flexRender(cell.column.columnDef.cell, cell.getContext())
+                        )}
                       </td>
                     );
                   })}

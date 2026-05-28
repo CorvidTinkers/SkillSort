@@ -183,10 +183,29 @@ export const extractResumesBatch = async (
     for (const chunk of chunks) {
       if (chunk.trim().startsWith('event:error')) {
         const dataMatch = chunk.match(/data:(.+)/);
-        if (dataMatch && dataMatch[1] && onError) {
+        if (dataMatch && dataMatch[1]) {
           try {
             const errorObj = JSON.parse(dataMatch[1].trim());
-            onError(errorObj);
+            if (errorObj.type === 'ITEM_ERROR') {
+              const student: StudentData = {
+                id: `error-${Date.now()}-${Math.random()}`,
+                name: { value: errorObj.fileName || 'Unknown File', confidence: 'low' },
+                domain: { value: 'ERROR', confidence: 'low' },
+                skills: { value: 'Failed to extract data', confidence: 'low' },
+                experience: { value: 'N/A', confidence: 'low' },
+                role: { value: 'N/A', confidence: 'low' },
+                atsScore: { value: NaN, confidence: 'low' },
+                githubInfo: { value: 'N/A', confidence: 'low' },
+                resumeUrl: '',
+                resumeText: { header: errorObj.fileName, contact: '', summary: '', skills: '', experience: '', education: '' },
+                knockoutResults: {},
+                hasError: true,
+                errorMessage: errorObj.message
+              };
+              onCandidateReceived(student);
+            } else if (onError) {
+              onError(errorObj);
+            }
           } catch(e) {
             console.error('Failed to parse error chunk:', e);
           }

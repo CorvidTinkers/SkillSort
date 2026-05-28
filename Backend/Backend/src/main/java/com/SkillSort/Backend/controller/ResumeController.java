@@ -57,73 +57,86 @@ public class ResumeController {
             @RequestParam(value = "enableKnockouts", defaultValue = "false") boolean enableKnockouts,
             @RequestParam(value = "modelProvider", defaultValue = "groq") String modelProvider,
             @RequestParam(value = "modelName", defaultValue = "llama-3.3-70b-versatile") String modelName) {
-        
-        SseEmitter emitter = new SseEmitter(180_000L); // 3-minute timeout
-        
-        // Capture authenticated user context on the request thread before invoking the async thread pool
+
+        SseEmitter emitter = new SseEmitter(0L); 
+        // Capture authenticated user context on the request thread before invoking the
+        // async thread pool
         final String currentUserId = UserContext.getCurrentUser();
-        
+
         executor.execute(() -> {
             try {
                 // 1. Extract plain texts and raw bytes in-memory
                 List<PdfExtractionResult> rawTexts = pdfService.extractFromZip(zipFile);
-                
+
                 // 2. Process each text through the AI Agents concurrently and stream
                 for (PdfExtractionResult entry : rawTexts) {
-                    // Pre-emptively save the candidate and PDF blob to the database
-                    // so the UI can immediately fetch the PDF when the event is received.
-                    databaseRepository.saveCandidate(entry.id(), currentUserId, entry.savedFileName(), entry.rawText(), null);
-                    databaseRepository.saveDocument(entry.id(), entry.pdfBytes(), entry.pdfBytes().length);
-                    
-                    // Task B: Asynchronous Local ATS Embedding Match
-                    CompletableFuture<ExtractedField> atsFuture = null;
-                    if (enableAts && jobDescription != null && !jobDescription.trim().isEmpty()) {
-                        atsFuture = CompletableFuture.supplyAsync(
-                                () -> atsService.calculateMatchScore(entry.rawText(), jobDescription), executor);
-                    }
-                    
-                    // Task A: Synchronous LLM Extraction (Dynamic Provider)
-                    Map<String, ExtractedField> extractedFields = extractionAgent.extractFields(entry.rawText(), fields, modelProvider, modelName);
-                            
+                    try {
+                        // Pre-emptively save the candidate and PDF blob to the database
+                        // so the UI can immediately fetch the PDF when the event is received.
+                        databaseRepository.saveCandidate(entry.id(), currentUserId, entry.savedFileName(), entry.rawText(),
+                                null);
+                        databaseRepository.saveDocument(entry.id(), entry.pdfBytes(), entry.pdfBytes().length);
 
-                    // Task C: Synchronous LLM Knockout Evaluation (Dynamic Provider)
-                    Map<String, Boolean> knockoutResults = new HashMap<>();
-                    if (enableKnockouts && checklist != null && !checklist.isEmpty()) {
-                        knockoutResults = knockoutAgent.evaluateKnockoutCriteria(entry.rawText(), checklist, modelProvider, modelName);
-                    }
-                    
-                    // Wait for the local ATS score to finish before sending the response
-                    ExtractedField atsScore = atsFuture != null ? atsFuture.get() : null;
-                    
-                    // Update ATS score in the database if available
-                    if (atsScore != null && atsScore.value() != null) {
+                        // Task B: Asynchronous Local ATS Embedding Match
+                        CompletableFuture<ExtractedField> atsFuture = null;
+                        if (enableAts && jobDescription != null && !jobDescription.trim().isEmpty()) {
+                            atsFuture = CompletableFuture.supplyAsync(
+                                    () -> atsService.calculateMatchScore(entry.rawText(), jobDescription), executor);
+                        }
+
+                        // Task A: Synchronous LLM Extraction (Dynamic Provider)
+                        Map<String, ExtractedField> extractedFields = extractionAgent.extractFields(entry.rawText(), fields,
+                                modelProvider, modelName);
+
+                        // Task C: Synchronous LLM Knockout Evaluation (Dynamic Provider)
+                        Map<String, Boolean> knockoutResults = new HashMap<>();
+                        if (enableKnockouts && checklist != null && !checklist.isEmpty()) {
+                            knockoutResults = knockoutAgent.evaluateKnockoutCriteria(entry.rawText(), checklist,
+                                    modelProvider, modelName);
+                        }
+
+                        // Wait for the local ATS score to finish before sending the response
+                        ExtractedField atsScore = atsFuture != null ? atsFuture.get() : null;
+
+                        // Update ATS score in the database if available
+                        if (atsScore != null && atsScore.value() != null) {
+                            try {
+                                double parsedScore = Double.parseDouble(atsScore.value());
+                                // The frontend needs ATS score to be persisted for the /list endpoint
+                                databaseRepository.updateCandidateAtsScore(entry.id(), parsedScore);
+                            } catch (NumberFormatException e) {
+                                System.err.println("Failed to parse ATS score: " + atsScore.value());
+                            }
+                        }
+                        emitter.send(SseEmitter.event()
+                                .name("candidate")
+                                .data(new CandidateResult(
+                                        entry.id(),
+                                        entry.savedFileName(),
+                                        extractedFields,
+                                        atsScore,
+                                        knockoutResults)));
+                    } catch (Exception itemException) {
+                        itemException.printStackTrace();
                         try {
-                            double parsedScore = Double.parseDouble(atsScore.value());
-                            // The frontend needs ATS score to be persisted for the /list endpoint
-                            databaseRepository.updateCandidateAtsScore(entry.id(), parsedScore);
-                        } catch (NumberFormatException e) {
-                            System.err.println("Failed to parse ATS score: " + atsScore.value());
+                            emitter.send(SseEmitter.event()
+                                    .name("error")
+                                    .data("{\"type\": \"ITEM_ERROR\", \"fileName\": \"" + entry.savedFileName() + "\", \"message\": \"Failed to extract resume\"}"));
+                        } catch (Exception emitterEx) {
+                            System.err.println("Emitter is dead. Halting batch processing.");
+                            break;
                         }
                     }
-                    emitter.send(SseEmitter.event()
-                        .name("candidate")
-                        .data(new CandidateResult(
-                            entry.id(),
-                            entry.savedFileName(),
-                            extractedFields,
-                            atsScore,
-                            knockoutResults
-                        )));
                 }
-                
+
                 emitter.complete();
             } catch (Exception e) {
                 e.printStackTrace();
-                
+
                 try {
                     String errorType = "ERROR";
                     String message = e.getMessage() != null ? e.getMessage().replace("\"", "\\\"") : "Unknown Error";
-                    
+
                     if (e instanceof AiApiException) {
                         errorType = ((AiApiException) e).getCode();
                         message = e.getMessage().replace("\"", "\\\"");
@@ -131,10 +144,10 @@ public class ResumeController {
                         errorType = ((AiApiException) e.getCause()).getCode();
                         message = e.getCause().getMessage().replace("\"", "\\\"");
                     }
-                    
+
                     emitter.send(SseEmitter.event()
-                        .name("error")
-                        .data("{\"type\": \"" + errorType + "\", \"message\": \"" + message + "\"}"));
+                            .name("error")
+                            .data("{\"type\": \"" + errorType + "\", \"message\": \"" + message + "\"}"));
                     emitter.complete(); // Gracefully close so frontend can process the error chunk
                 } catch (Exception ex) {
                     // Fallback if unable to send error event
@@ -142,7 +155,7 @@ public class ResumeController {
                 }
             }
         });
-        
+
         return emitter;
     }
 

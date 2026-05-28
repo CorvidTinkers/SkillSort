@@ -30,35 +30,71 @@ public abstract class BaseAgent {
             List<String> expectedKeys,
             V defaultValue) {
             
-        try {
-            ChatModel model = chatModelFactory.createChatModel(provider, modelName);
-            T service = AiServices.create(serviceClass, model);
-            
-            Map<String, ?> rawResult = extractionCall.apply(service);
-            
-            ObjectMapper mapper = new ObjectMapper();
-            Map<String, V> cleanResult = new HashMap<>();
-            
-            if (rawResult != null) {
-                for (Map.Entry<String, ?> entry : rawResult.entrySet()) {
-                    try {
-                        V parsedValue = mapper.convertValue(entry.getValue(), targetValueType);
-                        cleanResult.put(entry.getKey(), parsedValue);
-                    } catch (Exception e) {
-                        cleanResult.put(entry.getKey(), defaultValue);
+        int maxAttempts = 3;
+        long backoffDelayMs = 2000;
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                ChatModel model = chatModelFactory.createChatModel(provider, modelName);
+                long startime = System.currentTimeMillis();
+                System.out.println("starting AI service");
+                T service = AiServices.create(serviceClass, model);
+                System.out.println("AI service started");
+                Map<String, ?> rawResult = extractionCall.apply(service);
+                System.out.println("Result got at second:"+(System.currentTimeMillis() - startime)/1000);
+                ObjectMapper mapper = new ObjectMapper();
+                Map<String, V> cleanResult = new HashMap<>();
+                
+                if (rawResult != null) {
+                    for (Map.Entry<String, ?> entry : rawResult.entrySet()) {
+                        try {
+                            V parsedValue = mapper.convertValue(entry.getValue(), targetValueType);
+                            cleanResult.put(entry.getKey(), parsedValue);
+                        } catch (Exception e) {
+                            cleanResult.put(entry.getKey(), defaultValue);
+                        }
                     }
                 }
+                
+                for (String key : expectedKeys) {
+                    cleanResult.putIfAbsent(key, defaultValue);
+                }
+
+                long endtime = System.currentTimeMillis();
+                System.out.println("Time taken for extraction: " + (endtime - startime) / 1000 + " seconds");
+                
+                return cleanResult;
+            } catch (Exception e) {
+                String message = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+                
+                if (message.contains("429") || message.contains("rate limit") || message.contains("too many requests")) {
+                    if (attempt == maxAttempts) {
+                        handleException(e);
+                        return null;
+                    }
+                    try {
+                        System.out.println("Rate limit hit, sleeping for " + (backoffDelayMs * attempt) + "ms before retry...");
+                        Thread.sleep(backoffDelayMs * attempt);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+                    continue;
+                }
+                
+                if (message.contains("failed to parse") || message.contains("json") || message.contains("illegalstateexception")) {
+                    if (attempt == maxAttempts) {
+                        handleException(e);
+                        return null;
+                    }
+                    System.out.println("JSON Parse error, retrying without delay...");
+                    continue;
+                }
+                
+                handleException(e);
+                return null;
             }
-            
-            for (String key : expectedKeys) {
-                cleanResult.putIfAbsent(key, defaultValue);
-            }
-            
-            return cleanResult;
-        } catch (Exception e) {
-            handleException(e);
-            return null;
         }
+        return null;
     }
 
     protected void handleException(Exception e) {

@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import java.time.Duration;
 
+import static dev.langchain4j.model.chat.request.ResponseFormat.JSON;
+
 @Component
 public class ChatModelFactory {
 
@@ -26,6 +28,7 @@ public class ChatModelFactory {
                 return OllamaChatModel.builder()
                         .baseUrl(ollamaUrl)
                         .modelName(modelName)
+                        .responseFormat(JSON)
                         .timeout(Duration.ofMinutes(3))
                         .build();
             } else {
@@ -33,7 +36,7 @@ public class ChatModelFactory {
                         .baseUrl(groqApiUrl)
                         .apiKey(groqApiKey)
                         .modelName(modelName)
-                        .responseFormat("json_object") // Enforce JSON mode
+                        .responseFormat(JSON) // Enforce JSON mode
                         .timeout(Duration.ofMinutes(3))
                         .build();
             }
