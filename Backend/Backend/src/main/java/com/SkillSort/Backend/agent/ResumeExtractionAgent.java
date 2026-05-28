@@ -40,6 +40,7 @@ public class ResumeExtractionAgent extends BaseAgent {
               "name": { "value": "Jane Doe", "confidence": "high" },
               "domain": { "value": "Software Engineering", "confidence": "high" },
               "skills": { "value": "Java, React, SQL", "confidence": "medium" },
+              "summary":{"value":" //a few lines of summary of what ever summary is asked eg: skill summary; experience summary; all summary combined","confidence":"medium"},
               "missing_field": { "value": "Not Provided", "confidence": "low" }
             }
             
