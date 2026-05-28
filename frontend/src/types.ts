@@ -1,7 +1,7 @@
 export type Confidence = 'high' | 'medium' | 'low';
 
 export interface ExtractedField {
-  value: string | number;
+  value: string | number | null;
   confidence: Confidence;
 }
 
@@ -12,7 +12,7 @@ export interface StudentData {
   skills: ExtractedField;
   experience: ExtractedField;
   role: ExtractedField;
-  atsScore: { value: number; confidence: Confidence };
+  atsScore: { value: number | null; confidence: Confidence };
   githubInfo: ExtractedField;
   resumeUrl: string;
   resumeText: {

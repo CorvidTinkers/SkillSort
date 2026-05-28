@@ -13,13 +13,13 @@ interface AnalyticsDashboardProps {
 
 export function AnalyticsDashboard({ students = MOCK_STUDENTS }: AnalyticsDashboardProps) {
   const stats = useMemo(() => {
-    const scoredStudents = students.filter(s => !Number.isNaN(s.atsScore.value));
+    const scoredStudents = students.filter(s => s.atsScore.value !== null);
     const totalScored = scoredStudents.length;
-    const avgScore = totalScored > 0 ? scoredStudents.reduce((acc, s) => acc + s.atsScore.value, 0) / totalScored : 0;
+    const avgScore = totalScored > 0 ? scoredStudents.reduce((acc, s) => acc + (s.atsScore.value as number), 0) / totalScored : 0;
     
     // Domain distribution
     const domains = students.reduce((acc, s) => {
-      const d = s.domain.value as string;
+      const d = String(s.domain.value);
       acc[d] = (acc[d] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -32,17 +32,20 @@ export function AnalyticsDashboard({ students = MOCK_STUDENTS }: AnalyticsDashbo
     }, {} as Record<string, number>);
     const confidenceData = Object.keys(confidences).map(name => ({ name, value: confidences[name] }));
 
+    const highConfidence = confidences['high'] || 0;
+    const reviewRequired = (confidences['low'] || 0) + (confidences['medium'] || 0);
+
     // Role Score distribution
     const roleStats = scoredStudents.reduce((acc, s) => {
-      const r = s.role.value as string;
+      const r = String(s.role.value);
       if (!acc[r]) acc[r] = { name: r, avgScore: 0, count: 0 };
-      acc[r].avgScore += s.atsScore.value;
+      acc[r].avgScore += (s.atsScore.value as number);
       acc[r].count += 1;
       return acc;
     }, {} as Record<string, { name: string, avgScore: number, count: number }>);
     const roleData = Object.values(roleStats).map(r => ({ ...r, avgScore: Math.round(r.avgScore / r.count) })).sort((a,b) => b.avgScore - a.avgScore).slice(0, 5);
 
-    return { total: students.length, avgScore: Math.round(avgScore), domainData, confidenceData, roleData };
+    return { total: students.length, avgScore: Math.round(avgScore), domainData, confidenceData, roleData, highConfidence, reviewRequired };
   }, [students]);
 
   const COLORS = ['#0f766e', '#14b8a6', '#5eead4', '#ccfbf1', '#042f2e'];
@@ -78,7 +81,7 @@ export function AnalyticsDashboard({ students = MOCK_STUDENTS }: AnalyticsDashbo
             <div>
               <p className="text-sm font-medium text-slate-500">High Confidence Edges</p>
               <h3 className="text-2xl font-bold text-slate-800">
-                {stats.confidenceData.find(d => d.name === 'high')?.value || 0}
+                {stats.highConfidence}
               </h3>
             </div>
           </div>
@@ -87,7 +90,7 @@ export function AnalyticsDashboard({ students = MOCK_STUDENTS }: AnalyticsDashbo
             <div>
               <p className="text-sm font-medium text-slate-500">Review Required</p>
               <h3 className="text-2xl font-bold text-slate-800">
-                {(stats.confidenceData.find(d => d.name === 'low')?.value || 0) + (stats.confidenceData.find(d => d.name === 'medium')?.value || 0)}
+                {stats.reviewRequired}
               </h3>
             </div>
           </div>

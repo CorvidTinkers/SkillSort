@@ -45,17 +45,47 @@ public abstract class BaseAgent {
                 ObjectMapper mapper = new ObjectMapper();
                 Map<String, V> cleanResult = new HashMap<>();
                 
+                System.out.println("Rawresult:"+rawResult);
+                int failed_in_cleaning = 0;
                 if (rawResult != null) {
                     for (Map.Entry<String, ?> entry : rawResult.entrySet()) {
                         try {
                             V parsedValue = mapper.convertValue(entry.getValue(), targetValueType);
                             cleanResult.put(entry.getKey(), parsedValue);
                         } catch (Exception e) {
-                            cleanResult.put(entry.getKey(), defaultValue);
+
+                            //lenient backend parsing
+                            boolean recovered = false;
+                            try {
+                                Object rawVal = entry.getValue();
+                                String strVal = null;
+                                if (rawVal instanceof List) {
+                                    List<?> list = (List<?>) rawVal;
+                                    strVal = list.stream().map(Object::toString).reduce((a, b) -> a + ", " + b).orElse("");
+                                } else if (rawVal instanceof String) {
+                                    strVal = (String) rawVal;
+                                }
+                                
+                                if (strVal != null) {
+                                    Map<String, String> fallbackMap = new HashMap<>();
+                                    fallbackMap.put("value", strVal);
+                                    fallbackMap.put("confidence", "medium");
+                                    V parsedValue = mapper.convertValue(fallbackMap, targetValueType);
+                                    cleanResult.put(entry.getKey(), parsedValue);
+                                    recovered = true;
+                                }
+                            } catch (Exception ignored) {}
+                            
+                            if (!recovered) {
+                                cleanResult.put(entry.getKey(), defaultValue);
+                                failed_in_cleaning++;
+                                System.out.println("failed in cleaning field :" + entry.getKey());
+                            }
                         }
                     }
                 }
-                
+                System.out.println("failed in cleaning :"+failed_in_cleaning);
+                System.out.println("number missing :"+(expectedKeys.size() -cleanResult.size()));//
                 for (String key : expectedKeys) {
                     cleanResult.putIfAbsent(key, defaultValue);
                 }

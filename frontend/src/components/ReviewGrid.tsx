@@ -57,7 +57,7 @@ const SortableHeader = ({ header, children }: any) => {
     transition,
     opacity: isDragging ? 0.8 : 1,
     zIndex: isDragging ? 50 : (isPinned ? 35 : 1),
-    position: (isPinned ? 'sticky' : 'relative') as any,
+    position: isPinned ? 'sticky' : 'relative',
     backgroundColor: isDragging ? '#f1f5f9' : undefined,
     width: header.column.getSize(),
   };
@@ -77,7 +77,7 @@ const SortableHeader = ({ header, children }: any) => {
           {{
             asc: <span className="text-primary font-bold ml-1">↑</span>,
             desc: <span className="text-primary font-bold ml-1">↓</span>,
-          }[header.column.getIsSorted() as string] ?? null}
+          }[String(header.column.getIsSorted())] ?? null}
         </div>
         
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -150,10 +150,10 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
       accessorFn: row => row.name.value,
       header: 'Candidate',
       size: 200,
-      cell: info => (
+      cell: ({ row }) => (
         <div className="flex flex-col py-0.5">
           <span className="font-bold text-slate-800 tracking-tight group-hover:text-slate-950 transition-colors text-[14px]">
-            {info.getValue() as string}
+            {String(row.original.name.value)}
           </span>
           <span className="text-[11px] text-primary font-semibold hover:text-primary-container transition-colors select-none cursor-pointer flex items-center gap-1 mt-0.5">
             View Resume PDF
@@ -167,36 +167,36 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
       accessorKey: 'domain',
       header: 'Domain Focus',
       size: 160,
-      cell: info => <ExtractedCell field={info.getValue() as ExtractedField} />,
+      cell: ({ row }) => <ExtractedCell field={row.original.domain} />,
     },
     {
       id: 'skills',
       accessorKey: 'skills',
       header: 'Extracted Skills',
       size: 240,
-      cell: info => <ExtractedCell field={info.getValue() as ExtractedField} />,
+      cell: ({ row }) => <ExtractedCell field={row.original.skills} />,
     },
     {
       id: 'experience',
       accessorKey: 'experience',
       header: 'Experience Summary',
       size: 260,
-      cell: info => <ExtractedCell field={info.getValue() as ExtractedField} />,
+      cell: ({ row }) => <ExtractedCell field={row.original.experience} />,
     },
     {
       id: 'role',
       accessorKey: 'role',
       header: 'Recommended Job',
       size: 180,
-      cell: info => <ExtractedCell field={info.getValue() as ExtractedField} />,
+      cell: ({ row }) => <ExtractedCell field={row.original.role} />,
     },
     {
       id: 'atsScore',
       accessorKey: 'atsScore',
       header: 'ATS Matching',
       size: 140,
-      cell: info => {
-        const val = info.getValue() as { value: number; confidence: Confidence };
+      cell: ({ row }) => {
+        const val = row.original.atsScore;
         const score = val.value;
         
         if (Number.isNaN(score)) {
@@ -257,11 +257,11 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
       accessorKey: 'githubInfo',
       header: 'Dev Verified Metrics',
       size: 200,
-      cell: info => <ExtractedCell field={info.getValue() as ExtractedField} />,
+      cell: ({ row }) => <ExtractedCell field={row.original.githubInfo} />,
     },
   ], []);
 
-  const [columnOrder, setColumnOrder] = useState<string[]>(columns.map(c => c.id as string));
+  const [columnOrder, setColumnOrder] = useState<string[]>(columns.map(c => String(c.id)));
 
   const table = useReactTable({
     data: students,
@@ -333,7 +333,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
 
     const valueObj = student[fieldKey];
     if (valueObj && typeof valueObj === 'object' && 'confidence' in valueObj) {
-      const confidence = (valueObj as ExtractedField).confidence;
+      const confidence = String(valueObj.confidence);
       return `px-5 py-4 text-sm cursor-pointer border-b border-r border-slate-200 transition-colors ${getConfidenceBg(confidence, isActive)}`;
     }
 
@@ -351,15 +351,15 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
     const { active, over } = event;
     if (active && over && active.id !== over.id) {
       setColumnOrder((order) => {
-        const oldIndex = order.indexOf(active.id as string);
-        const newIndex = order.indexOf(over.id as string);
+        const oldIndex = order.indexOf(String(active.id));
+        const newIndex = order.indexOf(String(over.id));
         return arrayMove(order, oldIndex, newIndex);
       });
     }
   };
 
   const filteredColumns = table.getAllLeafColumns().filter(col => {
-    const headerTitle = col.columnDef.header as string;
+    const headerTitle = String(col.columnDef.header);
     return headerTitle.toLowerCase().includes(colSearchQuery.toLowerCase());
   });
 
@@ -556,7 +556,7 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
                           onClick={() => column.toggleVisibility(!isVisible)}
                           className={`w-full flex items-center justify-between text-left px-2 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${isVisible ? 'bg-slate-800/60 text-white' : 'hover:bg-slate-800/40 text-slate-500'}`}
                         >
-                          <span className="font-semibold">{column.columnDef.header as string}</span>
+                          <span className="font-semibold">{String(column.columnDef.header)}</span>
                           <div className={`h-4 w-4 rounded flex items-center justify-center border transition-all shrink-0 ${isVisible ? 'bg-primary border-primary text-white' : 'border-slate-700 bg-slate-950'}`}>
                             {isVisible && <Check size={11} strokeWidth={3} />}
                           </div>
@@ -825,11 +825,11 @@ export function ReviewGrid({ students, onStudentsChange, onSelectCell, activeStu
                   {eligibleCandidates.map(candidate => (
                     <div key={candidate.id} className="flex px-3.5 py-2.5 items-center justify-between text-xs transition hover:bg-white select-none">
                       <div className="flex flex-col gap-0.5">
-                        <span className="font-bold text-slate-800">{candidate.name.value as string}</span>
-                        <span className="text-[10px] text-slate-400 font-semibold">{candidate.domain.value as string}</span>
+                        <span className="font-bold text-slate-800">{String(candidate.name.value)}</span>
+                        <span className="text-[10px] text-slate-400 font-semibold">{String(candidate.domain.value)}</span>
                       </div>
                       <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
-                        {candidate.atsScore.value as number}% Match
+                        {Number(candidate.atsScore.value)}% Match
                       </span>
                     </div>
                   ))}

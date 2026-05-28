@@ -10,6 +10,11 @@ import { extractResumesBatch } from './services/api';
 import { StudentData, User } from './types';
 import { Briefcase, LayoutGrid, BarChart3, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 
+const getInitials = (user: User | null): string => {
+  if (!user || !user.name) return 'PO';
+  return user.name.charAt(0).toUpperCase();
+};
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [students, setStudents] = useState<StudentData[]>([]);
@@ -194,7 +199,7 @@ export default function App() {
               onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
               className="h-8 w-8 rounded-full bg-primary-container text-on-primary-container border border-primary/20 flex items-center justify-center font-bold text-xs select-none cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
             >
-              {user?.name?.charAt(0).toUpperCase() || 'PO'}
+              {getInitials(user)}
             </div>
 
             {/* Profile Dropdown */}

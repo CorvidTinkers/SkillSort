@@ -11,6 +11,7 @@ export const MOCK_STUDENTS: StudentData[] = [
     atsScore: { value: 92, confidence: "high" },
     githubInfo: { value: "42 Repos | 120 Contribs", confidence: "high" },
     resumeUrl: "/resumes/priya_sharma_2024.pdf",
+    knockoutResults: {},
     resumeText: {
       header: "Priya Sharma",
       contact: "priya.s@student.edu | github.com/priyasharma (Verified)",
@@ -30,6 +31,7 @@ export const MOCK_STUDENTS: StudentData[] = [
     atsScore: { value: 78, confidence: "medium" },
     githubInfo: { value: "12 Repos | 15 Contribs", confidence: "medium" },
     resumeUrl: "/resumes/rahul_desai_cv.pdf",
+    knockoutResults: {},
     resumeText: {
       header: "Rahul Desai",
       contact: "r.desai@student.edu | github.com/rdesai",
@@ -49,6 +51,7 @@ export const MOCK_STUDENTS: StudentData[] = [
     atsScore: { value: 95, confidence: "high" },
     githubInfo: { value: "85 Repos | Kaggler (Expert)", confidence: "high" },
     resumeUrl: "/resumes/aisha_khan_data.pdf",
+    knockoutResults: {},
     resumeText: {
       header: "Aisha Khan",
       contact: "akhan@student.edu | kaggle.com/aishak",
@@ -68,6 +71,7 @@ export const MOCK_STUDENTS: StudentData[] = [
     atsScore: { value: 65, confidence: "low" },
     githubInfo: { value: "8 Repos", confidence: "low" },
     resumeUrl: "/resumes/v_singh.pdf",
+    knockoutResults: {},
     resumeText: {
       header: "V. Singh",
       contact: "vsingh@student.edu",
@@ -87,6 +91,7 @@ export const MOCK_STUDENTS: StudentData[] = [
     atsScore: { value: 88, confidence: "high" },
     githubInfo: { value: "22 Repos", confidence: "medium" },
     resumeUrl: "/resumes/meerapatel.pdf",
+    knockoutResults: {},
     resumeText: {
       header: "Meera Patel",
       contact: "meera.p@student.edu",
@@ -106,6 +111,7 @@ export const MOCK_STUDENTS: StudentData[] = [
     atsScore: { value: 91, confidence: "high" },
     githubInfo: { value: "54 Repos | 200 Contribs", confidence: "high" },
     resumeUrl: "/resumes/arjun_reddy.pdf",
+    knockoutResults: {},
     resumeText: {
       header: "Arjun Reddy",
       contact: "arjun@student.edu",
@@ -125,6 +131,7 @@ export const MOCK_STUDENTS: StudentData[] = [
     atsScore: { value: 82, confidence: "medium" },
     githubInfo: { value: "30 Repos", confidence: "medium" },
     resumeUrl: "/resumes/sjones.pdf",
+    knockoutResults: {},
     resumeText: {
       header: "Sarah Jones",
       contact: "sarah.j@student.edu",

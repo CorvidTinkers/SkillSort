@@ -1,12 +1,13 @@
 package com.SkillSort.Backend.controller;
 
+import com.SkillSort.Backend.model.*;
 import com.SkillSort.Backend.repository.DatabaseRepository;
+import com.SkillSort.Backend.service.AuthService;
 import com.SkillSort.Backend.service.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -20,12 +21,15 @@ public class AuthController {
     @Autowired
     private JwtService jwtService;
 
+    @Autowired
+    private AuthService authService;
+
     // Traditional Sign-Up Endpoint
     @PostMapping("/signup")
-    public ResponseEntity<?> signUp(@RequestBody Map<String, String> payload) {
-        String name = payload.get("name");
-        String email = payload.get("email");
-        String password = payload.get("password");
+    public ResponseEntity<?> signUp(@RequestBody SignUpRequest payload) {
+        String name = payload.name();
+        String email = payload.email();
+        String password = payload.password();
 
         if (name == null || name.trim().isEmpty() ||
                 email == null || email.trim().isEmpty() ||
@@ -42,7 +46,7 @@ public class AuthController {
         }
 
         String userId = "user-" + UUID.randomUUID().toString();
-        String passwordHash = hashPassword(password);
+        String passwordHash = authService.hashPassword(password);
         String avatarUrl = "https://api.dicebear.com/7.x/initials/svg?seed=" + name;
 
         // Save traditional user
@@ -51,24 +55,17 @@ public class AuthController {
         // Generate JWT
         String token = jwtService.generateToken(userId, email, name, "credentials");
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("token", token);
-
-        Map<String, String> userDetails = new HashMap<>();
-        userDetails.put("id", userId);
-        userDetails.put("email", email);
-        userDetails.put("name", name);
-        userDetails.put("avatarUrl", avatarUrl);
-        response.put("user", userDetails);
+        UserDTO userDetails = new UserDTO(userId, email, name, avatarUrl);
+        AuthResponse response = new AuthResponse(token, userDetails);
 
         return ResponseEntity.ok(response);
     }
 
     // Traditional Login Endpoint
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> payload) {
-        String email = payload.get("email");
-        String password = payload.get("password");
+    public ResponseEntity<?> login(@RequestBody LoginRequest payload) {
+        String email = payload.email();
+        String password = payload.password();
 
         if (email == null || email.trim().isEmpty() ||
                 password == null || password.trim().isEmpty()) {
@@ -88,7 +85,7 @@ public class AuthController {
                     .body(Map.of("error", "This account uses SSO. Please log in using Google/GitHub."));
         }
 
-        String inputHash = hashPassword(password);
+        String inputHash = authService.hashPassword(password);
         if (!passwordHash.equals(inputHash)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid email or password."));
         }
@@ -101,26 +98,19 @@ public class AuthController {
 
         String token = jwtService.generateToken(userId, email, name, ssoProvider);
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("token", token);
-
-        Map<String, String> userDetails = new HashMap<>();
-        userDetails.put("id", userId);
-        userDetails.put("email", email);
-        userDetails.put("name", name);
-        userDetails.put("avatarUrl", avatarUrl);
-        response.put("user", userDetails);
+        UserDTO userDetails = new UserDTO(userId, email, name, avatarUrl);
+        AuthResponse response = new AuthResponse(token, userDetails);
 
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/sso")
-    public ResponseEntity<?> authenticateSSO(@RequestBody Map<String, String> payload) {
-        String id = payload.get("id");
-        String email = payload.get("email");
-        String name = payload.get("name");
-        String ssoProvider = payload.getOrDefault("ssoProvider", "google");
-        String avatarUrl = payload.get("avatarUrl");
+    public ResponseEntity<?> authenticateSSO(@RequestBody SSORequest payload) {
+        String id = payload.id();
+        String email = payload.email();
+        String name = payload.name();
+        String ssoProvider = payload.ssoProvider() != null ? payload.ssoProvider() : "google";
+        String avatarUrl = payload.avatarUrl();
 
         if (id == null || email == null || name == null) {
             return ResponseEntity.badRequest()
@@ -133,35 +123,9 @@ public class AuthController {
         // Generate JWT token containing claims
         String token = jwtService.generateToken(id, email, name, ssoProvider);
 
-        // Build Response
-        Map<String, Object> response = new HashMap<>();
-        response.put("token", token);
-
-        Map<String, String> userDetails = new HashMap<>();
-        userDetails.put("id", id);
-        userDetails.put("email", email);
-        userDetails.put("name", name);
-        userDetails.put("avatarUrl", avatarUrl);
-        response.put("user", userDetails);
+        UserDTO userDetails = new UserDTO(id, email, name, avatarUrl);
+        AuthResponse response = new AuthResponse(token, userDetails);
 
         return ResponseEntity.ok(response);
-    }
-
-    private String hashPassword(String password) {
-        try {
-            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
-            byte[] encodedhash = digest.digest(password.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            StringBuilder hexString = new StringBuilder(2 * encodedhash.length);
-            for (byte b : encodedhash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) {
-                    hexString.append('0');
-                }
-                hexString.append(hex);
-            }
-            return hexString.toString();
-        } catch (Exception e) {
-            throw new RuntimeException("Error hashing password", e);
-        }
     }
 }

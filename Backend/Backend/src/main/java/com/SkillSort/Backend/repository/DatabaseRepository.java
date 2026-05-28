@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.SkillSort.Backend.model.CandidateResult;
 
 import jakarta.annotation.PostConstruct;
 
@@ -112,24 +113,27 @@ public class DatabaseRepository {
 
     // List all candidates uploaded by this user, including their attributes and
     // knockouts
-    public List<Map<String, Object>> getCandidatesByUser(String userId) {
+    public List<CandidateResult> getCandidatesByUser(String userId) {
         String sql = "SELECT id, filename, extracted_text, ats_score, created_at FROM candidates WHERE uploaded_by = ? ORDER BY created_at DESC";
         List<Map<String, Object>> candidates = jdbcTemplate.queryForList(sql, userId);
 
+        List<CandidateResult> results = new java.util.ArrayList<>();
+
         for (Map<String, Object> candidate : candidates) {
             String candidateId = (String) candidate.get("id");
+            String fileName = (String) candidate.get("filename");
+            Double atsScoreVal = (Double) candidate.get("ats_score");
 
             // Fetch attributes
             String attrSql = "SELECT attribute_key, attribute_value, confidence FROM candidate_attributes WHERE candidate_id = ?";
             List<Map<String, Object>> attributes = jdbcTemplate.queryForList(attrSql, candidateId);
-            Map<String, Map<String, String>> extractedData = new HashMap<>();
+            Map<String, com.SkillSort.Backend.model.ExtractedField> extractedData = new HashMap<>();
             for (Map<String, Object> attr : attributes) {
-                Map<String, String> fieldDetails = new HashMap<>();
-                fieldDetails.put("value", (String) attr.get("attribute_value"));
-                fieldDetails.put("confidence", (String) attr.get("confidence"));
-                extractedData.put((String) attr.get("attribute_key"), fieldDetails);
+                extractedData.put((String) attr.get("attribute_key"), new com.SkillSort.Backend.model.ExtractedField(
+                        (String) attr.get("attribute_value"),
+                        (String) attr.get("confidence")
+                ));
             }
-            candidate.put("extractedData", extractedData);
 
             // Fetch knockouts
             String koSql = "SELECT criteria, passed FROM candidate_knockouts WHERE candidate_id = ?";
@@ -138,9 +142,19 @@ public class DatabaseRepository {
             for (Map<String, Object> ko : knockouts) {
                 knockoutResults.put((String) ko.get("criteria"), ((Integer) ko.get("passed")) == 1);
             }
-            candidate.put("knockoutResults", knockoutResults);
+
+            com.SkillSort.Backend.model.ExtractedField atsScoreField = atsScoreVal != null ?
+                new com.SkillSort.Backend.model.ExtractedField(String.valueOf(atsScoreVal), "high") : null;
+
+            results.add(new com.SkillSort.Backend.model.CandidateResult(
+                candidateId,
+                fileName,
+                extractedData,
+                atsScoreField,
+                knockoutResults
+            ));
         }
 
-        return candidates;
+        return results;
     }
 }
