@@ -13,15 +13,25 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Candidates Table (Isolated by uploaded_by user)
+-- 2. Runs Table (Groups candidates into batches)
+CREATE TABLE IF NOT EXISTS runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+-- 3. Candidates Table (Isolated by uploaded_by user and grouped by run_id)
 CREATE TABLE IF NOT EXISTS candidates (
     id TEXT PRIMARY KEY,
+    run_id INTEGER NOT NULL,
     uploaded_by TEXT NOT NULL,
     filename TEXT NOT NULL,
     extracted_text TEXT,
     ats_score REAL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (uploaded_by) REFERENCES users (id) ON DELETE CASCADE
+    FOREIGN KEY (uploaded_by) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (run_id) REFERENCES runs (id) ON DELETE CASCADE
 );
 
 -- 3. Candidate Attributes Table (Dynamic AI extracted fields)

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { ReviewGrid } from './ReviewGrid';
+import { ReviewGrid } from './reviewgrid/ReviewGrid';
 import { ResumeViewer } from './ResumeViewer';
 import { StudentData } from '../types';
 import { ChevronLeft } from 'lucide-react';

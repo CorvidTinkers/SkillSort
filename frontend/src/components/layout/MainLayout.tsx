@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { GlobalHeader } from '../GlobalHeader';
 import { ModelSelectionModal } from '../ModelSelectionModal';
+import { Sidebar } from '../sidebar/Sidebar';
 import { useAuth } from '../../context/AuthContext';
 import { useResume } from '../../context/ResumeContext';
 
@@ -34,9 +35,12 @@ export const MainLayout: React.FC = () => {
         onModelSelectClick={() => setIsModelModalOpen(true)}
       />
 
-      <main className="flex-1 flex overflow-hidden">
-        <Outlet />
-      </main>
+      <div className="flex-1 flex overflow-hidden">
+        <Sidebar />
+        <main className="flex-1 flex overflow-hidden">
+          <Outlet />
+        </main>
+      </div>
       
       <ModelSelectionModal 
         isOpen={isModelModalOpen}

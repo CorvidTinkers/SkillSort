@@ -20,6 +20,8 @@ interface ResumeContextType {
   setModelProvider: (v: string) => void;
   modelName: string;
   setModelName: (v: string) => void;
+  currentRunId: number | null;
+  setCurrentRunId: (id: number | null) => void;
 }
 
 const ResumeContext = createContext<ResumeContextType | undefined>(undefined);
@@ -34,6 +36,7 @@ export const ResumeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [checklistItems, setChecklistItems] = useState<string[]>([]);
   const [modelProvider, setModelProvider] = useState(() => localStorage.getItem('currentModelProvider') || 'groq');
   const [modelName, setModelName] = useState(() => localStorage.getItem('currentModelName') || 'llama-3.3-70b-versatile');
+  const [currentRunId, setCurrentRunId] = useState<number | null>(null);
 
   return (
     <ResumeContext.Provider value={{
@@ -45,7 +48,8 @@ export const ResumeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       hasJobDescription, setHasJobDescription,
       checklistItems, setChecklistItems,
       modelProvider, setModelProvider,
-      modelName, setModelName
+      modelName, setModelName,
+      currentRunId, setCurrentRunId
     }}>
       {children}
     </ResumeContext.Provider>

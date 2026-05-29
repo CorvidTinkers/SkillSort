@@ -8,6 +8,12 @@ interface CandidateResult {
   knockoutResults: Record<string, boolean>;
 }
 
+export interface RunHistory {
+  run_id: number;
+  run_date: string;
+  candidate_count: number;
+}
+
 const BASE_URL = 'http://localhost:8080';
 
 const getAuthHeaders = (): Record<string, string> => {
@@ -85,8 +91,28 @@ export const loginWithCredentials = async (
   return data;
 };
 
-export const fetchSavedCandidates = async (): Promise<StudentData[]> => {
-  const response = await fetch(`${BASE_URL}/api/resumes/list`, {
+export const fetchPastRuns = async (): Promise<RunHistory[]> => {
+  const response = await fetch(`${BASE_URL}/api/resumes/past-runs`, {
+    method: 'GET',
+    headers: {
+      ...getAuthHeaders(),
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('skillsort_token');
+      throw new Error('Unauthorized');
+    }
+    const errorText = await response.text();
+    throw new Error(errorText || 'Failed to fetch past runs');
+  }
+
+  return response.json();
+};
+
+export const fetchRun = async (runId: number): Promise<StudentData[]> => {
+  const response = await fetch(`${BASE_URL}/api/resumes/fetch-run?runId=${runId}`, {
     method: 'GET',
     headers: {
       ...getAuthHeaders(),

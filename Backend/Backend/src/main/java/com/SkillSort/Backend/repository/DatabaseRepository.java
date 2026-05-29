@@ -61,10 +61,22 @@ public class DatabaseRepository {
             return null;
         }
     }
+    // Create a new run and return the generated run ID
+    public Long createRun(String userId) {
+        String sql = "INSERT INTO runs (user_id) VALUES (?)";
+        org.springframework.jdbc.support.KeyHolder keyHolder = new org.springframework.jdbc.support.GeneratedKeyHolder();
+        jdbcTemplate.update(connection -> {
+            java.sql.PreparedStatement ps = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS);
+            ps.setString(1, userId);
+            return ps;
+        }, keyHolder);
+        return keyHolder.getKey() != null ? keyHolder.getKey().longValue() : null;
+    }
+
     // Save Candidate
-    public void saveCandidate(String id, String uploadedBy, String filename, String extractedText, Double atsScore) {
-        String sql = "INSERT INTO candidates (id, uploaded_by, filename, extracted_text, ats_score) VALUES (?, ?, ?, ?, ?)";
-        jdbcTemplate.update(sql, id, uploadedBy, filename, extractedText, atsScore);
+    public void saveCandidate(String id, Long runId, String uploadedBy, String filename, String extractedText, Double atsScore) {
+        String sql = "INSERT INTO candidates (id, run_id, uploaded_by, filename, extracted_text, ats_score) VALUES (?, ?, ?, ?, ?, ?)";
+        jdbcTemplate.update(sql, id, runId, uploadedBy, filename, extractedText, atsScore);
     }
 
     // Update Candidate ATS Score
@@ -111,11 +123,17 @@ public class DatabaseRepository {
         }
     }
 
-    // List all candidates uploaded by this user, including their attributes and
-    // knockouts
-    public List<CandidateResult> getCandidatesByUser(String userId) {
-        String sql = "SELECT id, filename, extracted_text, ats_score, created_at FROM candidates WHERE uploaded_by = ? ORDER BY created_at DESC";
-        List<Map<String, Object>> candidates = jdbcTemplate.queryForList(sql, userId);
+    // Get past runs by user
+    public List<Map<String, Object>> getHistoryByUser(String userId) {
+        String sql = "SELECT run_id, MIN(created_at) as run_date, COUNT(*) as candidate_count " +
+                     "FROM candidates WHERE uploaded_by = ? GROUP BY run_id ORDER BY run_date DESC";
+        return jdbcTemplate.queryForList(sql, userId);
+    }
+
+    // List all candidates uploaded by this user for a specific run, including their attributes and knockouts
+    public List<CandidateResult> getCandidatesByRun(String userId, Long runId) {
+        String sql = "SELECT id, filename, extracted_text, ats_score, created_at FROM candidates WHERE uploaded_by = ? AND run_id = ? ORDER BY created_at DESC";
+        List<Map<String, Object>> candidates = jdbcTemplate.queryForList(sql, userId, runId);
 
         List<CandidateResult> results = new java.util.ArrayList<>();
 

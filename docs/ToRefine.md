@@ -24,3 +24,10 @@
 * **dyanmic field selection** : We need to add functionality for selecting fields dynamically.
 * **editable fields** : We need to add functionality for editing fields.
 * **add loading bar in the reviewgrid so that we know it is doing something
+* **UI overhaul** : 
+- logout button 
+- restart button 
+- loading bar 
+-  basically adding essentials and intutive updates 
+- make rerun ats button and the kockout button functional
+-if user token is old and backend says bad token error (need to implement this as well) automatic login screen 

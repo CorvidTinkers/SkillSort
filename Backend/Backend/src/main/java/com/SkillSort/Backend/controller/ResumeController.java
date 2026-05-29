@@ -62,6 +62,7 @@ public class ResumeController {
         // Capture authenticated user context on the request thread before invoking the
         // async thread pool
         final String currentUserId = UserContext.getCurrentUser();
+        final Long runId = databaseRepository.createRun(currentUserId);
 
         executor.execute(() -> {
             try {
@@ -73,7 +74,7 @@ public class ResumeController {
                     try {
                         // Pre-emptively save the candidate and PDF blob to the database
                         // so the UI can immediately fetch the PDF when the event is received.
-                        databaseRepository.saveCandidate(entry.id(), currentUserId, entry.savedFileName(), entry.rawText(),
+                        databaseRepository.saveCandidate(entry.id(), runId, currentUserId, entry.savedFileName(), entry.rawText(),
                                 null);
                         databaseRepository.saveDocument(entry.id(), entry.pdfBytes(), entry.pdfBytes().length);
 
@@ -87,12 +88,24 @@ public class ResumeController {
                         // Task A: Synchronous LLM Extraction (Dynamic Provider)
                         Map<String, ExtractedField> extractedFields = extractionAgent.extractFields(entry.rawText(), fields,
                                 modelProvider, modelName);
+                                
+                        if (extractedFields != null) {
+                            for (Map.Entry<String, ExtractedField> fieldEntry : extractedFields.entrySet()) {
+                                databaseRepository.saveAttribute(entry.id(), fieldEntry.getKey(), fieldEntry.getValue().value(), fieldEntry.getValue().confidence());
+                            }
+                        }
 
                         // Task C: Synchronous LLM Knockout Evaluation (Dynamic Provider)
                         Map<String, Boolean> knockoutResults = new HashMap<>();
                         if (enableKnockouts && checklist != null && !checklist.isEmpty()) {
                             knockoutResults = knockoutAgent.evaluateKnockoutCriteria(entry.rawText(), checklist,
                                     modelProvider, modelName);
+                                    
+                            if (knockoutResults != null) {
+                                for (Map.Entry<String, Boolean> koEntry : knockoutResults.entrySet()) {
+                                    databaseRepository.saveKnockout(entry.id(), koEntry.getKey(), koEntry.getValue());
+                                }
+                            }
                         }
 
                         // Wait for the local ATS score to finish before sending the response
@@ -159,13 +172,23 @@ public class ResumeController {
         return emitter;
     }
 
-    @GetMapping("/list")
-    public ResponseEntity<?> listSavedResumes() {
+    @GetMapping("/past-runs")
+    public ResponseEntity<?> getPastRuns() {
         String currentUserId = UserContext.getCurrentUser();
         if (currentUserId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Unauthorized"));
         }
-        return ResponseEntity.ok(databaseRepository.getCandidatesByUser(currentUserId));
+        return ResponseEntity.ok(databaseRepository.getHistoryByUser(currentUserId));
+    }
+
+    @GetMapping("/fetch-run")
+    public ResponseEntity<?> fetchRun(@RequestParam("runId") Long runId) {
+        String currentUserId = UserContext.getCurrentUser();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Unauthorized"));
+        }
+        System.out.println("Fetching run for user: " + currentUserId + " and run id: " + runId+ " first few records are:"+databaseRepository.getCandidatesByRun(currentUserId, runId));
+        return ResponseEntity.ok(databaseRepository.getCandidatesByRun(currentUserId, runId));
     }
 
     @GetMapping(value = "/blob/{id}")
